@@ -76,6 +76,8 @@ export function JobQueueBoard({ photographers, companies, specialties }: Props) 
           flash(`${byId(photographerSlug)?.name} claimed the job ✓`, "ok");
         } else if (data.reason === "already_claimed") {
           flash("Too late — another shooter already claimed it", "err");
+        } else if (data.reason === "reserved") {
+          flash("That job is a direct offer reserved for another photographer", "err");
         } else {
           flash("Could not claim that job", "err");
         }
@@ -123,6 +125,46 @@ export function JobQueueBoard({ photographers, companies, specialties }: Props) 
     [refresh],
   );
 
+  const assign = useCallback(
+    async (jobId: string, photographerSlug: string) => {
+      setPending((p) => ({ ...p, [jobId]: true }));
+      try {
+        const res = await fetch(`/api/jobs/${jobId}/assign`, {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({ photographerSlug }),
+        });
+        if (res.ok) {
+          flash(`Offered directly to ${byId(photographerSlug)?.name}`, "ok");
+        } else {
+          flash("Could not offer that job", "err");
+        }
+      } finally {
+        setPending((p) => ({ ...p, [jobId]: false }));
+        refresh();
+      }
+    },
+    [byId, flash, refresh],
+  );
+
+  const decline = useCallback(
+    async (jobId: string, photographerSlug: string) => {
+      setPending((p) => ({ ...p, [jobId]: true }));
+      try {
+        await fetch(`/api/jobs/${jobId}/decline`, {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({ photographerSlug }),
+        });
+        flash("Offer declined — released back to the bench", "ok");
+      } finally {
+        setPending((p) => ({ ...p, [jobId]: false }));
+        refresh();
+      }
+    },
+    [flash, refresh],
+  );
+
   const reset = useCallback(async () => {
     await fetch("/api/reset", { method: "POST" });
     flash("Demo reset to seed data", "ok");
@@ -166,6 +208,7 @@ export function JobQueueBoard({ photographers, companies, specialties }: Props) 
           <NewJobDialog
             companies={companies}
             specialties={specialties}
+            photographers={photographers}
             onCreated={(msg) => {
               flash(msg, "ok");
               refresh();
@@ -240,9 +283,17 @@ export function JobQueueBoard({ photographers, companies, specialties }: Props) 
                               </h3>
                             </div>
                           </div>
-                          <Badge tone={statusTone[job.status]} className="capitalize">
-                            {job.status}
-                          </Badge>
+                          <div className="flex shrink-0 flex-col items-end gap-1.5">
+                            <Badge
+                              tone={statusTone[job.status]}
+                              className="capitalize"
+                            >
+                              {job.status}
+                            </Badge>
+                            {job.status === "open" && job.assignedToSlug && (
+                              <Badge tone="blue">Direct offer</Badge>
+                            )}
+                          </div>
                         </div>
 
                         <div className="mt-3 grid grid-cols-3 gap-2 text-xs">
@@ -259,24 +310,16 @@ export function JobQueueBoard({ photographers, companies, specialties }: Props) 
 
                         <div className="mt-4 border-t border-ink-700 pt-3">
                           {job.status === "open" ? (
-                            <div className="flex flex-col gap-2">
-                              <Button
-                                className="w-full py-2"
-                                disabled={isPending}
-                                onClick={() => claim(job.id, actingAs)}
-                              >
-                                {isPending
-                                  ? "Claiming…"
-                                  : `Claim as ${byId(actingAs)?.name?.split(" ")[0]} →`}
-                              </Button>
-                              <button
-                                disabled={isPending}
-                                onClick={() => simulateRace(job.id)}
-                                className="text-xs font-medium text-bone/50 underline-offset-2 hover:text-amber-soft hover:underline disabled:opacity-50"
-                              >
-                                ⚡ Simulate 5 shooters racing for this job
-                              </button>
-                            </div>
+                            <OpenJobActions
+                              job={job}
+                              actingAs={actingAs}
+                              photographers={photographers}
+                              isPending={!!isPending}
+                              onClaim={() => claim(job.id, actingAs)}
+                              onRace={() => simulateRace(job.id)}
+                              onAssign={(slug) => assign(job.id, slug)}
+                              onDecline={(slug) => decline(job.id, slug)}
+                            />
                           ) : claimer ? (
                             <div className="flex items-center justify-between">
                               <div className="flex items-center gap-2">
@@ -340,6 +383,8 @@ export function JobQueueBoard({ photographers, companies, specialties }: Props) 
           ) : (
             log.map((e, i) => {
               const p = byId(e.photographerSlug);
+              const declined = e.reason === "declined";
+              const label = e.outcome === "won" ? "won" : declined ? "declined" : "lost";
               return (
                 <div
                   key={i}
@@ -347,19 +392,25 @@ export function JobQueueBoard({ photographers, companies, specialties }: Props) 
                 >
                   <span
                     className={clsx(
-                      "w-12 shrink-0 text-[11px] font-semibold uppercase",
+                      "w-14 shrink-0 text-[11px] font-semibold uppercase",
                       e.outcome === "won"
                         ? "text-emerald-400"
-                        : "text-bone/35",
+                        : declined
+                          ? "text-sky-300"
+                          : "text-bone/35",
                     )}
                   >
-                    {e.outcome}
+                    {label}
                   </span>
-                  <span className="text-bone/70">{p?.name ?? e.photographerSlug}</span>
+                  <span className="text-bone/70">
+                    {p?.name ?? e.photographerSlug}
+                  </span>
                   <span className="text-bone/35">
                     {e.outcome === "won"
                       ? `claimed ${e.jobId}`
-                      : `missed ${e.jobId}${e.reason ? ` (${e.reason})` : ""}`}
+                      : declined
+                        ? `released ${e.jobId} back to the bench`
+                        : `missed ${e.jobId}${e.reason ? ` (${e.reason})` : ""}`}
                   </span>
                 </div>
               );
@@ -379,6 +430,134 @@ export function JobQueueBoard({ photographers, companies, specialties }: Props) 
           )}
         >
           {toast.msg}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function OpenJobActions({
+  job,
+  actingAs,
+  photographers,
+  isPending,
+  onClaim,
+  onRace,
+  onAssign,
+  onDecline,
+}: {
+  job: Job;
+  actingAs: string;
+  photographers: Photographer[];
+  isPending: boolean;
+  onClaim: () => void;
+  onRace: () => void;
+  onAssign: (slug: string) => void;
+  onDecline: (slug: string) => void;
+}) {
+  const [assignOpen, setAssignOpen] = useState(false);
+  const [pick, setPick] = useState(photographers[0]?.slug ?? "");
+  const byId = (slug: string) => photographers.find((p) => p.slug === slug);
+
+  // --- Direct offer to a specific photographer ---
+  if (job.assignedToSlug) {
+    const offered = byId(job.assignedToSlug);
+    const forMe = job.assignedToSlug === actingAs;
+    if (forMe) {
+      return (
+        <div className="flex flex-col gap-2">
+          <div className="flex items-center gap-2 rounded-lg bg-sky-500/10 px-2.5 py-1.5 text-xs text-sky-200">
+            <span className="live-dot h-1.5 w-1.5 rounded-full bg-sky-400" />
+            Offered directly to you
+          </div>
+          <div className="flex gap-2">
+            <Button className="flex-1 py-2" disabled={isPending} onClick={onClaim}>
+              {isPending ? "…" : "Accept offer →"}
+            </Button>
+            <button
+              disabled={isPending}
+              onClick={() => onDecline(actingAs)}
+              className="rounded-full px-3 py-2 text-sm font-medium text-bone/55 ring-1 ring-inset ring-ink-600 hover:text-rose-200 hover:ring-rose-500/40 disabled:opacity-50"
+            >
+              Decline
+            </button>
+          </div>
+        </div>
+      );
+    }
+    return (
+      <div className="flex items-center gap-2 text-xs text-bone/55">
+        {offered && (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            src={offered.avatar}
+            alt=""
+            className="h-6 w-6 rounded-full object-cover opacity-80"
+          />
+        )}
+        <span>
+          Reserved for{" "}
+          <span className="font-medium text-bone/80">{offered?.name}</span> —
+          only they can accept
+        </span>
+      </div>
+    );
+  }
+
+  // --- Open to the whole bench ---
+  return (
+    <div className="flex flex-col gap-2">
+      <Button className="w-full py-2" disabled={isPending} onClick={onClaim}>
+        {isPending
+          ? "Claiming…"
+          : `Claim as ${byId(actingAs)?.name?.split(" ")[0]} →`}
+      </Button>
+
+      {assignOpen ? (
+        <div className="flex items-center gap-2 rounded-lg border border-ink-600 bg-ink-950 p-2">
+          <select
+            value={pick}
+            onChange={(e) => setPick(e.target.value)}
+            className="min-w-0 flex-1 bg-transparent text-xs text-bone focus:outline-none"
+          >
+            {photographers.map((p) => (
+              <option key={p.slug} value={p.slug} className="bg-ink-800">
+                {p.name} · ★{p.rating}
+              </option>
+            ))}
+          </select>
+          <button
+            disabled={isPending}
+            onClick={() => {
+              onAssign(pick);
+              setAssignOpen(false);
+            }}
+            className="shrink-0 rounded-full bg-sky-500/20 px-3 py-1 text-xs font-semibold text-sky-200 hover:bg-sky-500/30 disabled:opacity-50"
+          >
+            Offer
+          </button>
+          <button
+            onClick={() => setAssignOpen(false)}
+            className="shrink-0 text-xs text-bone/40 hover:text-bone/70"
+          >
+            ✕
+          </button>
+        </div>
+      ) : (
+        <div className="flex items-center justify-between">
+          <button
+            disabled={isPending}
+            onClick={onRace}
+            className="text-xs font-medium text-bone/50 underline-offset-2 hover:text-amber-soft hover:underline disabled:opacity-50"
+          >
+            ⚡ Simulate 5 racing
+          </button>
+          <button
+            onClick={() => setAssignOpen(true)}
+            className="text-xs font-medium text-bone/50 hover:text-sky-300"
+          >
+            Assign to a shooter →
+          </button>
         </div>
       )}
     </div>
@@ -419,10 +598,12 @@ function SkeletonCard() {
 function NewJobDialog({
   companies,
   specialties,
+  photographers,
   onCreated,
 }: {
   companies: Company[];
   specialties: Specialty[];
+  photographers: Photographer[];
   onCreated: (msg: string) => void;
 }) {
   const [open, setOpen] = useState(false);
@@ -437,6 +618,7 @@ function NewJobDialog({
     deliverables: "",
     equipment: "byo",
     urgency: "standard",
+    assignedToSlug: "",
   });
 
   const submit = async () => {
@@ -448,9 +630,20 @@ function NewJobDialog({
         body: JSON.stringify(form),
       });
       if (res.ok) {
-        onCreated("Job posted to the queue — the bench is notified");
+        const target = photographers.find((p) => p.slug === form.assignedToSlug);
+        onCreated(
+          target
+            ? `Posted as a direct offer to ${target.name}`
+            : "Job posted to the queue — the bench is notified",
+        );
         setOpen(false);
-        setForm((f) => ({ ...f, title: "", neighborhood: "", deliverables: "" }));
+        setForm((f) => ({
+          ...f,
+          title: "",
+          neighborhood: "",
+          deliverables: "",
+          assignedToSlug: "",
+        }));
       }
     } finally {
       setBusy(false);
@@ -551,6 +744,24 @@ function NewJobDialog({
                   placeholder="30 HDR stills + 6 twilight"
                   className="input"
                 />
+              </Field>
+              <Field label="Assign directly to (optional)" full>
+                <select
+                  value={form.assignedToSlug}
+                  onChange={(e) =>
+                    setForm({ ...form, assignedToSlug: e.target.value })
+                  }
+                  className="input"
+                >
+                  <option value="" className="bg-ink-800">
+                    Open to the whole bench (queue)
+                  </option>
+                  {photographers.map((p) => (
+                    <option key={p.slug} value={p.slug} className="bg-ink-800">
+                      Offer directly to {p.name}
+                    </option>
+                  ))}
+                </select>
               </Field>
             </div>
             <div className="mt-6 flex justify-end gap-2">

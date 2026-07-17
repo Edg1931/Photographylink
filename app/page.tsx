@@ -3,6 +3,7 @@ import { Container, Button, Badge, SectionLabel, Stars } from "@/components/ui";
 import { PhotographerCard } from "@/components/PhotographerCard";
 import { photographers, companies, openJobs } from "@/lib/data";
 import { QueueDemo } from "@/components/QueueDemo";
+import { Reveal } from "@/components/Reveal";
 import { brand } from "@/lib/brand";
 
 export default function HomePage() {
@@ -149,7 +150,7 @@ export default function HomePage() {
             </p>
           </div>
 
-          <div className="mt-14 grid gap-5 md:grid-cols-3">
+          <Reveal className="mt-14 grid gap-5 md:grid-cols-3">
             {PROBLEMS.map((p) => (
               <div
                 key={p.title}
@@ -162,7 +163,7 @@ export default function HomePage() {
                 </p>
               </div>
             ))}
-          </div>
+          </Reveal>
         </Container>
       </section>
 
@@ -207,7 +208,7 @@ export default function HomePage() {
       {/* --------------------------------------------------- Two-sided value */}
       <section className="py-20 lg:py-28">
         <Container>
-          <div className="grid gap-5 lg:grid-cols-2">
+          <Reveal className="grid gap-5 lg:grid-cols-2">
             <ValueCard
               tone="amber"
               eyebrow="For companies"
@@ -234,7 +235,7 @@ export default function HomePage() {
               href="/photographers"
               cta="Create your profile"
             />
-          </div>
+          </Reveal>
         </Container>
       </section>
 
@@ -255,11 +256,11 @@ export default function HomePage() {
               Browse all →
             </Link>
           </div>
-          <div className="mt-10 grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
+          <Reveal className="mt-10 grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
             {featured.map((p) => (
               <PhotographerCard key={p.slug} p={p} />
             ))}
-          </div>
+          </Reveal>
         </Container>
       </section>
 

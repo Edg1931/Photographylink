@@ -27,6 +27,7 @@ export async function POST(req: Request) {
     deliverables: body.deliverables ?? "Standard listing gallery",
     equipment: body.equipment ?? "byo",
     urgency: body.urgency ?? "standard",
+    assignedToSlug: body.assignedToSlug || undefined,
   });
   return NextResponse.json({ job }, { status: 201 });
 }

@@ -83,6 +83,9 @@ export interface Job {
   equipment: EquipmentPolicy;
   status: JobStatus;
   claimedBySlug?: string;
+  // When set, the job is a DIRECT OFFER to one photographer — only they can
+  // accept it. They can decline, which releases it back to the whole bench.
+  assignedToSlug?: string;
   urgency: "standard" | "rush" | "flexible";
 }
 
@@ -364,6 +367,23 @@ export const jobs: Job[] = [
     deliverables: "35 HDR stills + 6 twilight composites",
     equipment: "byo",
     status: "open",
+    urgency: "standard",
+  },
+  {
+    id: "job-3389",
+    companySlug: "summit-media",
+    title: "Client requested Theo — luxury new build",
+    type: "Architecture",
+    address: "18 Enclave Ct",
+    neighborhood: "Westlake",
+    shootAt: "Sat · 9:00 AM",
+    postedAgo: "35 min ago",
+    durationHours: 3,
+    payout: 700,
+    deliverables: "40 architectural stills + 4 twilight",
+    equipment: "byo",
+    status: "open",
+    assignedToSlug: "theo-brandt",
     urgency: "standard",
   },
   {

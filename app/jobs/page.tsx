@@ -19,13 +19,13 @@ export default function JobsPage() {
                 The job queue
               </h1>
               <p className="mt-4 text-lg text-bone/65">
-                This board is backed by a real server. Post a job, claim one as
-                any photographer, or hit{" "}
-                <span className="text-amber-soft">
-                  “simulate 5 shooters racing”
-                </span>{" "}
-                — the claim is <strong className="text-bone">atomic</strong>, so
-                exactly one wins every time. Watch the activity log confirm it.
+                This board is backed by a real server. Open a job to the whole
+                bench, or{" "}
+                <span className="text-sky-300">offer it directly</span> to one
+                photographer when a client requests them. Claims are{" "}
+                <strong className="text-bone">atomic</strong> — hit{" "}
+                <span className="text-amber-soft">“simulate 5 racing”</span> and
+                exactly one wins every time. The activity log confirms it.
               </p>
             </div>
             <Badge tone="amber" className="text-sm">

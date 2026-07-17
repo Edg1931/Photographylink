@@ -28,7 +28,7 @@ export type ClaimResult =
   | { ok: true; job: Job }
   | {
       ok: false;
-      reason: "not_found" | "not_open" | "already_claimed";
+      reason: "not_found" | "not_open" | "already_claimed" | "reserved";
       job?: Job;
     };
 
@@ -94,6 +94,11 @@ export function claimJob(
       recordClaim(jobId, photographerSlug, "lost", "not_open");
       return { ok: false, reason: "already_claimed" as const, job: clone(job) };
     }
+    // A direct offer can only be accepted by the photographer it was offered to.
+    if (job.assignedToSlug && job.assignedToSlug !== photographerSlug) {
+      recordClaim(jobId, photographerSlug, "lost", "reserved");
+      return { ok: false, reason: "reserved" as const, job: clone(job) };
+    }
 
     // --- critical section (serialized by the mutex) ---
     await delay(140); // simulated DB write latency
@@ -103,11 +108,55 @@ export function claimJob(
       recordClaim(jobId, photographerSlug, "lost", "already_claimed");
       return { ok: false, reason: "already_claimed" as const, job: clone(job) };
     }
+    if (job.assignedToSlug && job.assignedToSlug !== photographerSlug) {
+      recordClaim(jobId, photographerSlug, "lost", "reserved");
+      return { ok: false, reason: "reserved" as const, job: clone(job) };
+    }
 
     job.status = "claimed";
     job.claimedBySlug = photographerSlug;
     job.postedAgo = "just now";
     recordClaim(jobId, photographerSlug, "won");
+    return { ok: true as const, job: clone(job) };
+  });
+}
+
+/**
+ * Directly offer an open job to one photographer. Only they can then accept it;
+ * everyone else is rejected with `reserved`. Re-assigning is allowed while the
+ * job is still open.
+ */
+export function assignJob(
+  jobId: string,
+  photographerSlug: string,
+): Promise<ClaimResult> {
+  return withLock(() => {
+    const job = jobsState.find((j) => j.id === jobId);
+    if (!job) return { ok: false, reason: "not_found" as const };
+    if (job.status !== "open") {
+      return { ok: false, reason: "not_open" as const, job: clone(job) };
+    }
+    job.assignedToSlug = photographerSlug;
+    return { ok: true as const, job: clone(job) };
+  });
+}
+
+/**
+ * The offered photographer declines a direct offer, releasing the job back to
+ * the whole bench (it becomes a normal open, claimable job).
+ */
+export function declineJob(
+  jobId: string,
+  photographerSlug: string,
+): Promise<ClaimResult> {
+  return withLock(() => {
+    const job = jobsState.find((j) => j.id === jobId);
+    if (!job) return { ok: false, reason: "not_found" as const };
+    if (job.assignedToSlug !== photographerSlug || job.status !== "open") {
+      return { ok: false, reason: "not_open" as const, job: clone(job) };
+    }
+    job.assignedToSlug = undefined;
+    recordClaim(jobId, photographerSlug, "lost", "declined");
     return { ok: true as const, job: clone(job) };
   });
 }
@@ -134,6 +183,8 @@ export interface NewJobInput {
   deliverables: string;
   equipment: Job["equipment"];
   urgency: Job["urgency"];
+  // Optional: post the job as a direct offer to one photographer.
+  assignedToSlug?: string;
 }
 
 /** Post a fresh job to the top of the queue. */
@@ -156,6 +207,7 @@ export function postJob(input: NewJobInput): Promise<Job> {
       deliverables: input.deliverables || "Standard listing gallery",
       equipment: input.equipment,
       status: "open",
+      assignedToSlug: input.assignedToSlug || undefined,
       urgency: input.urgency,
     };
     jobsState = [job, ...jobsState];
