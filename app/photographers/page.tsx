@@ -1,9 +1,10 @@
 import { Container, SectionLabel } from "@/components/ui";
 import { photographers, allSpecialties } from "@/lib/data";
 import { PhotographerBrowser } from "@/components/PhotographerBrowser";
+import { brand } from "@/lib/brand";
 
 export const metadata = {
-  title: "Find photographers · Photographylink",
+  title: `Find photographers · ${brand.name}`,
 };
 
 export default function PhotographersPage() {

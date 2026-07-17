@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { Container, Button } from "@/components/ui";
+import { brand } from "@/lib/brand";
 
 const links = [
   { href: "/photographers", label: "Find photographers" },
@@ -17,7 +18,8 @@ export function SiteNav() {
             <ApertureMark />
           </span>
           <span className="text-[17px] font-semibold tracking-tight">
-            Photography<span className="text-amber-brand">link</span>
+            {brand.wordmark.head}
+            <span className="text-amber-brand">{brand.wordmark.tail}</span>
           </span>
         </Link>
 

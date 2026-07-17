@@ -74,15 +74,19 @@ export function Button({
   variant = "primary",
   className,
   type,
+  onClick,
+  disabled,
 }: {
   children: React.ReactNode;
   href?: string;
   variant?: "primary" | "ghost" | "outline";
   className?: string;
   type?: "button" | "submit";
+  onClick?: () => void;
+  disabled?: boolean;
 }) {
   const base =
-    "inline-flex items-center justify-center gap-2 rounded-full px-5 py-2.5 text-sm font-semibold transition-all duration-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-brand/60";
+    "inline-flex items-center justify-center gap-2 rounded-full px-5 py-2.5 text-sm font-semibold transition-all duration-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-brand/60 disabled:cursor-not-allowed disabled:opacity-60";
   const variants: Record<string, string> = {
     primary:
       "bg-amber-brand text-ink-950 hover:bg-amber-soft hover:shadow-[0_8px_30px_-8px_rgba(232,169,75,0.6)]",
@@ -99,7 +103,12 @@ export function Button({
     );
   }
   return (
-    <button type={type ?? "button"} className={cls}>
+    <button
+      type={type ?? "button"}
+      className={cls}
+      onClick={onClick}
+      disabled={disabled}
+    >
       {children}
     </button>
   );

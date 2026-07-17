@@ -8,6 +8,7 @@ import {
 } from "@/lib/data";
 import { Container, Badge, Button, Stars, Avatar } from "@/components/ui";
 import { JobCard } from "@/components/JobCard";
+import { brand } from "@/lib/brand";
 
 export function generateStaticParams() {
   return companies.map((c) => ({ slug: c.slug }));
@@ -15,7 +16,7 @@ export function generateStaticParams() {
 
 export function generateMetadata({ params }: { params: { slug: string } }) {
   const c = getCompany(params.slug);
-  return { title: c ? `${c.name} · Photographylink` : "Company" };
+  return { title: c ? `${c.name} · ${brand.name}` : "Company" };
 }
 
 const policyCopy = {

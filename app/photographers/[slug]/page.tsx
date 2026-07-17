@@ -6,6 +6,7 @@ import {
   getCompany,
 } from "@/lib/data";
 import { Container, Badge, Button, Stars } from "@/components/ui";
+import { brand } from "@/lib/brand";
 
 export function generateStaticParams() {
   return photographers.map((p) => ({ slug: p.slug }));
@@ -13,7 +14,7 @@ export function generateStaticParams() {
 
 export function generateMetadata({ params }: { params: { slug: string } }) {
   const p = getPhotographer(params.slug);
-  return { title: p ? `${p.name} · Photographylink` : "Photographer" };
+  return { title: p ? `${p.name} · ${brand.name}` : "Photographer" };
 }
 
 export default function PhotographerPage({

@@ -1,7 +1,8 @@
 import { Container, SectionLabel, Button, Badge } from "@/components/ui";
+import { brand } from "@/lib/brand";
 
 export const metadata = {
-  title: "How it works · Photographylink",
+  title: `How it works · ${brand.name}`,
 };
 
 export default function HowItWorksPage() {
@@ -15,7 +16,7 @@ export default function HowItWorksPage() {
             Two sides, one network, zero cold-hiring.
           </h1>
           <p className="mt-5 max-w-2xl text-lg text-bone/65">
-            Photographylink is a marketplace with a twist: instead of one-off
+            {brand.name} is a marketplace with a twist: instead of one-off
             gigs, companies build a lasting bench and dispatch work through a
             queue. Here&apos;s how each side moves.
           </p>

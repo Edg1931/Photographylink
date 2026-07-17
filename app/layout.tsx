@@ -2,14 +2,15 @@ import type { Metadata } from "next";
 import "./globals.css";
 import { SiteNav } from "@/components/SiteNav";
 import { SiteFooter } from "@/components/SiteFooter";
+import { brand } from "@/lib/brand";
 
 export const metadata: Metadata = {
-  title: "Photographylink — the network for working photographers",
+  title: `${brand.name} — the bench that never misses a shoot`,
   description:
     "The two-sided platform where photography companies build a trained bench of shooters and freelancers find steady, transparent work. Post a job to your queue; the first qualified pro claims it.",
-  metadataBase: new URL("https://photographylink.example"),
+  metadataBase: new URL("https://callsheet.example"),
   openGraph: {
-    title: "Photographylink",
+    title: brand.name,
     description:
       "Build a bench. Claim the queue. Never turn down a shoot again.",
     type: "website",

@@ -3,6 +3,7 @@ import { Container, Button, Badge, SectionLabel, Stars } from "@/components/ui";
 import { PhotographerCard } from "@/components/PhotographerCard";
 import { photographers, companies, openJobs } from "@/lib/data";
 import { QueueDemo } from "@/components/QueueDemo";
+import { brand } from "@/lib/brand";
 
 export default function HomePage() {
   const featured = photographers.slice(0, 4);
@@ -32,7 +33,7 @@ export default function HomePage() {
               Never turn down a shoot.
             </h1>
             <p className="mt-6 max-w-xl text-lg leading-relaxed text-bone/70">
-              Photographylink connects photography companies with a trained,
+              {brand.name} connects photography companies with a trained,
               rated bench of freelance shooters. Post a job to your queue — the
               first qualified pro in the area claims it. Consistency without the
               constant re-hiring.

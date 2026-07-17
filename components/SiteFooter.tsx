@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { Container } from "@/components/ui";
+import { brand } from "@/lib/brand";
 
 export function SiteFooter() {
   return (
@@ -12,7 +13,8 @@ export function SiteFooter() {
                 ◎
               </span>
               <span className="text-[17px] font-semibold">
-                Photography<span className="text-amber-brand">link</span>
+                {brand.wordmark.head}
+                <span className="text-amber-brand">{brand.wordmark.tail}</span>
               </span>
             </div>
             <p className="mt-4 max-w-xs text-sm leading-relaxed text-bone/55">
@@ -48,7 +50,9 @@ export function SiteFooter() {
         </div>
 
         <div className="mt-12 flex flex-col items-start justify-between gap-4 border-t border-ink-700/70 pt-6 text-sm text-bone/45 sm:flex-row sm:items-center">
-          <p>© {new Date().getFullYear()} Photographylink. Prototype.</p>
+          <p>
+            © {new Date().getFullYear()} {brand.name}. Prototype.
+          </p>
           <p className="text-bone/40">
             Built as a working concept · mock data throughout
           </p>
