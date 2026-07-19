@@ -177,8 +177,44 @@ export function JobQueueBoard({ photographers, companies, specialties }: Props) 
     { key: "delivered", title: "Delivered", match: (s: string) => s === "delivered", hint: "Shot & delivered" },
   ];
 
+  const openJobs = jobs.filter((j) => j.status === "open");
+  const inProgress = jobs.filter(
+    (j) => j.status === "claimed" || j.status === "scheduled",
+  );
+  const delivered = jobs.filter((j) => j.status === "delivered");
+  const openPayout = openJobs.reduce((sum, j) => sum + j.payout, 0);
+
+  const stats = [
+    { label: "Open to claim", value: String(openJobs.length), accent: true },
+    { label: "Payout available", value: `$${openPayout.toLocaleString()}` },
+    { label: "In progress", value: String(inProgress.length) },
+    { label: "Delivered", value: String(delivered.length) },
+  ];
+
   return (
     <div>
+      {/* Summary strip */}
+      <div className="mb-5 grid grid-cols-2 gap-3 sm:grid-cols-4">
+        {stats.map((s) => (
+          <div
+            key={s.label}
+            className="rounded-2xl border border-ink-700 bg-ink-900 px-4 py-3"
+          >
+            <p className="text-[11px] uppercase tracking-wide text-bone/40">
+              {s.label}
+            </p>
+            <p
+              className={clsx(
+                "mt-0.5 font-display text-2xl font-semibold",
+                s.accent ? "text-amber-soft" : "text-bone",
+              )}
+            >
+              {loaded ? s.value : "—"}
+            </p>
+          </div>
+        ))}
+      </div>
+
       {/* Control bar */}
       <div className="flex flex-col gap-4 rounded-2xl border border-ink-700 bg-ink-900 p-4 lg:flex-row lg:items-center lg:justify-between">
         <label className="flex items-center gap-3 text-sm text-bone/70">
@@ -278,9 +314,12 @@ export function JobQueueBoard({ photographers, companies, specialties }: Props) 
                               >
                                 {company?.name}
                               </Link>
-                              <h3 className="text-sm font-semibold leading-tight text-bone">
+                              <Link
+                                href={`/jobs/${job.id}`}
+                                className="text-sm font-semibold leading-tight text-bone hover:text-amber-soft"
+                              >
                                 {job.title}
-                              </h3>
+                              </Link>
                             </div>
                           </div>
                           <div className="flex shrink-0 flex-col items-end gap-1.5">

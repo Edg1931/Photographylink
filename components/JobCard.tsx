@@ -42,9 +42,12 @@ export function JobCard({ job }: { job: Job }) {
             >
               {company?.name}
             </Link>
-            <h3 className="text-[15px] font-semibold leading-tight text-bone">
+            <Link
+              href={`/jobs/${job.id}`}
+              className="text-[15px] font-semibold leading-tight text-bone hover:text-amber-soft"
+            >
               {job.title}
-            </h3>
+            </Link>
           </div>
         </div>
         <div className="flex shrink-0 flex-col items-end gap-1.5">
@@ -84,7 +87,9 @@ export function JobCard({ job }: { job: Job }) {
                     : "Gear optional"}
               </span>
             </span>
-            <Button className="px-4 py-2">Claim job →</Button>
+            <Button href={`/jobs/${job.id}`} className="px-4 py-2">
+              View job →
+            </Button>
           </>
         ) : claimer ? (
           <div className="flex w-full items-center justify-between">
