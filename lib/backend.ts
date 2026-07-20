@@ -15,6 +15,12 @@ import { companies as seedCompanies, Company } from "./data";
 import { getSupabase } from "./supabase";
 import * as repo from "./supabase-repo";
 import {
+  isMasterLogin,
+  masterAccount,
+  MASTER_TOKEN,
+  MASTER_EMAIL,
+} from "./master";
+import {
   Account,
   Inquiry,
   Role,
@@ -80,6 +86,9 @@ export async function updateCompany(
 // ---- Accounts / sessions ----------------------------------------------------
 
 export async function signUp(input: SignUpInput): Promise<AuthResult> {
+  if (input.email.trim().toLowerCase() === MASTER_EMAIL) {
+    return { ok: false, error: "That email is reserved — just log in with it." };
+  }
   const sb = getSupabase();
   if (sb) return repo.signUp(sb, input, newCompanyRecord, slugBase);
 
@@ -113,6 +122,10 @@ export async function signUp(input: SignUpInput): Promise<AuthResult> {
 }
 
 export async function logIn(email: string, password: string): Promise<AuthResult> {
+  // Master account: recognized statelessly so it always works, on any instance.
+  if (isMasterLogin(email, password)) {
+    return { ok: true, token: MASTER_TOKEN, account: masterAccount() };
+  }
   const sb = getSupabase();
   if (sb) return repo.logIn(sb, email, password);
 
@@ -136,6 +149,8 @@ export async function accountFromToken(
   token: string | undefined,
 ): Promise<Account | undefined> {
   if (!token) return undefined;
+  // Master session is recognized without any store lookup.
+  if (token === MASTER_TOKEN) return masterAccount();
   const sb = getSupabase();
   if (sb) return repo.accountFromToken(sb, token);
   const id = sessions.get(token);
