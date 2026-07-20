@@ -2,8 +2,9 @@
 
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
-import { Company, Offering, Specialty, allSpecialties } from "@/lib/data";
+import { Company, Offering, Specialty, allSpecialties, photographers } from "@/lib/data";
 import { Button, Badge } from "@/components/ui";
+import { PostJobForm } from "@/components/PostJobForm";
 import { clsx } from "@/lib/clsx";
 
 interface Inquiry {
@@ -17,7 +18,7 @@ interface Inquiry {
   read: boolean;
 }
 
-type Tab = "site" | "offerings" | "inquiries" | "grow";
+type Tab = "site" | "offerings" | "post" | "inquiries" | "grow";
 
 export function Dashboard({
   account,
@@ -77,6 +78,7 @@ export function Dashboard({
   const tabs: { key: Tab; label: string; badge?: number }[] = [
     { key: "site", label: "Micro-site" },
     { key: "offerings", label: "Services & pricing" },
+    { key: "post", label: "Post a job" },
     { key: "inquiries", label: "Inquiries", badge: inquiries.length },
     { key: "grow", label: "Grow" },
   ];
@@ -143,6 +145,9 @@ export function Dashboard({
         )}
         {tab === "offerings" && (
           <OfferingsEditor co={co} onSave={patch} saving={saving} saved={saved} />
+        )}
+        {tab === "post" && (
+          <PostJobForm companySlug={co.slug} bench={photographers} />
         )}
         {tab === "inquiries" && (
           <Inquiries inquiries={inquiries} onRefresh={refreshInquiries} />

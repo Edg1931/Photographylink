@@ -6,6 +6,7 @@ import {
   getCompany,
 } from "@/lib/data";
 import { Container, Badge, Button, Stars } from "@/components/ui";
+import { ProtoAction } from "@/components/ProtoAction";
 import { brand } from "@/lib/brand";
 
 export function generateStaticParams() {
@@ -87,8 +88,12 @@ export default function PhotographerPage({
                 </p>
               </div>
               <div className="flex gap-2">
-                <Button>Invite to bench</Button>
-                <Button variant="outline">Message</Button>
+                <ProtoAction label="Invite to bench" confirmed="Invite sent" />
+                <ProtoAction
+                  label="Message"
+                  confirmed="Message sent"
+                  variant="outline"
+                />
               </div>
             </div>
           </div>
@@ -232,7 +237,18 @@ export default function PhotographerPage({
                 Want {p.name.split(" ")[0]} on your bench? Invite them to your
                 network and they&apos;ll see jobs you post to the queue.
               </p>
-              <Button className="mt-4 w-full">Invite to bench</Button>
+              <ProtoAction
+                label="Invite to bench"
+                confirmed="Invite sent"
+                className="mt-4 w-full"
+              />
+              <Button
+                href="/jobs"
+                variant="outline"
+                className="mt-2 w-full"
+              >
+                Offer a job in the queue →
+              </Button>
             </div>
           </aside>
         </div>

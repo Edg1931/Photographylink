@@ -40,11 +40,11 @@ export default function HomePage() {
               constant re-hiring.
             </p>
             <div className="mt-8 flex flex-wrap items-center gap-3">
-              <Button href="/how-it-works" className="px-6 py-3 text-base">
+              <Button href="/signup" className="px-6 py-3 text-base">
                 I run a photography company
               </Button>
               <Button
-                href="/photographers"
+                href="/signup"
                 variant="outline"
                 className="px-6 py-3 text-base"
               >
@@ -339,7 +339,7 @@ export default function HomePage() {
               grow.
             </p>
             <div className="relative mt-8 flex flex-wrap justify-center gap-3">
-              <Button href="/how-it-works" className="px-6 py-3 text-base">
+              <Button href="/signup" className="px-6 py-3 text-base">
                 Get started free
               </Button>
               <Button

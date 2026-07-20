@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 import { Container, Button } from "@/components/ui";
 import { brand } from "@/lib/brand";
@@ -16,6 +17,9 @@ const links = [
 export function SiteNav() {
   const [open, setOpen] = useState(false);
   const [signedIn, setSignedIn] = useState<boolean | null>(null);
+  const pathname = usePathname();
+  const isActive = (href: string) =>
+    href === "/" ? pathname === "/" : pathname.startsWith(href);
 
   useEffect(() => {
     fetch("/api/auth/me")
@@ -46,7 +50,12 @@ export function SiteNav() {
             <Link
               key={l.href}
               href={l.href}
-              className="rounded-full px-3.5 py-2 text-sm font-medium text-bone/70 transition-colors hover:bg-ink-700 hover:text-bone"
+              className={clsx(
+                "rounded-full px-3.5 py-2 text-sm font-medium transition-colors",
+                isActive(l.href)
+                  ? "bg-ink-700 text-bone"
+                  : "text-bone/70 hover:bg-ink-700 hover:text-bone",
+              )}
             >
               {l.label}
             </Link>
@@ -95,11 +104,23 @@ export function SiteNav() {
               key={l.href}
               href={l.href}
               onClick={() => setOpen(false)}
-              className="rounded-lg px-3 py-2.5 text-sm font-medium text-bone/80 hover:bg-ink-800"
+              className={clsx(
+                "rounded-lg px-3 py-2.5 text-sm font-medium hover:bg-ink-800",
+                isActive(l.href) ? "bg-ink-800 text-bone" : "text-bone/80",
+              )}
             >
               {l.label}
             </Link>
           ))}
+          {!signedIn && (
+            <Link
+              href="/login"
+              onClick={() => setOpen(false)}
+              className="rounded-lg px-3 py-2.5 text-sm font-medium text-bone/80 hover:bg-ink-800"
+            >
+              Log in
+            </Link>
+          )}
           <Button
             href={signedIn ? "/dashboard" : "/signup"}
             className="mt-2 w-full"

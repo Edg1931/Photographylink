@@ -6,6 +6,7 @@ import { listJobs } from "@/lib/store";
 import { Container, Badge, Button, Stars, Avatar } from "@/components/ui";
 import { JobCard } from "@/components/JobCard";
 import { InquireButton } from "@/components/InquireButton";
+import { ProtoAction } from "@/components/ProtoAction";
 import { brand } from "@/lib/brand";
 
 export const dynamic = "force-dynamic";
@@ -77,7 +78,11 @@ export default async function CompanyPage({
             </div>
             <div className="flex gap-2 pb-1">
               <InquireButton companySlug={c.slug} companyName={c.name} />
-              <Button variant="outline">Apply to shoot</Button>
+              <ProtoAction
+                label="Apply to shoot"
+                confirmed="Application sent"
+                variant="outline"
+              />
             </div>
           </div>
         </Container>

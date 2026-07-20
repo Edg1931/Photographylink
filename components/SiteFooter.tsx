@@ -27,8 +27,8 @@ export function SiteFooter() {
             title="For photographers"
             links={[
               ["Browse work", "/jobs"],
-              ["Build a profile", "/photographers/maya-okafor"],
-              ["Join a network", "/companies/lumen-estates"],
+              ["Find photographers", "/photographers"],
+              ["Create your profile", "/signup"],
             ]}
           />
           <FooterCol
@@ -36,15 +36,15 @@ export function SiteFooter() {
             links={[
               ["Build your bench", "/how-it-works"],
               ["Post to the queue", "/jobs"],
-              ["Your micro-site", "/companies/lumen-estates"],
+              ["Hire a studio", "/companies"],
             ]}
           />
           <FooterCol
             title="Platform"
             links={[
               ["How it works", "/how-it-works"],
-              ["Pricing", "/how-it-works"],
-              ["Trust & ratings", "/how-it-works"],
+              ["Sign up", "/signup"],
+              ["Log in", "/login"],
             ]}
           />
         </div>

@@ -68,6 +68,24 @@ export function Badge({
   );
 }
 
+export type ButtonVariant = "primary" | "ghost" | "outline";
+
+export function buttonClasses(
+  variant: ButtonVariant = "primary",
+  className?: string,
+): string {
+  const base =
+    "inline-flex items-center justify-center gap-2 rounded-full px-5 py-2.5 text-sm font-semibold transition-all duration-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-brand/60 disabled:cursor-not-allowed disabled:opacity-60";
+  const variants: Record<string, string> = {
+    primary:
+      "bg-amber-brand text-ink-950 hover:bg-amber-soft hover:shadow-[0_8px_30px_-8px_rgba(232,169,75,0.6)]",
+    ghost: "text-bone/80 hover:text-bone hover:bg-ink-700",
+    outline:
+      "text-bone ring-1 ring-inset ring-ink-600 hover:ring-amber-brand/50 hover:text-amber-soft",
+  };
+  return clsx(base, variants[variant], className);
+}
+
 export function Button({
   children,
   href,
@@ -79,22 +97,13 @@ export function Button({
 }: {
   children: React.ReactNode;
   href?: string;
-  variant?: "primary" | "ghost" | "outline";
+  variant?: ButtonVariant;
   className?: string;
   type?: "button" | "submit";
   onClick?: () => void;
   disabled?: boolean;
 }) {
-  const base =
-    "inline-flex items-center justify-center gap-2 rounded-full px-5 py-2.5 text-sm font-semibold transition-all duration-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-brand/60 disabled:cursor-not-allowed disabled:opacity-60";
-  const variants: Record<string, string> = {
-    primary:
-      "bg-amber-brand text-ink-950 hover:bg-amber-soft hover:shadow-[0_8px_30px_-8px_rgba(232,169,75,0.6)]",
-    ghost: "text-bone/80 hover:text-bone hover:bg-ink-700",
-    outline:
-      "text-bone ring-1 ring-inset ring-ink-600 hover:ring-amber-brand/50 hover:text-amber-soft",
-  };
-  const cls = clsx(base, variants[variant], className);
+  const cls = buttonClasses(variant, className);
   if (href) {
     return (
       <Link href={href} className={cls}>

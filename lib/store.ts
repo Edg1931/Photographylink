@@ -13,8 +13,9 @@
 // -----------------------------------------------------------------------------
 
 import { randomUUID } from "crypto";
-import { jobs as seedJobs, Job, getCompany } from "./data";
+import { jobs as seedJobs, Job } from "./data";
 import { getSupabase } from "./supabase";
+import { getCompany } from "./backend";
 import * as repo from "./supabase-repo";
 import { NewJobInput } from "./backend-types";
 
@@ -217,7 +218,7 @@ export async function resetDemo(): Promise<{ ok: true }> {
 }
 
 async function hasCompany(slug: string): Promise<boolean> {
-  const sb = getSupabase();
-  if (sb) return Boolean(await repo.getCompany(sb, slug));
-  return Boolean(getCompany(slug));
+  // Uses the backend (in-memory or Supabase) so companies created at signup
+  // are recognized — not just the static seed set.
+  return Boolean(await getCompany(slug));
 }

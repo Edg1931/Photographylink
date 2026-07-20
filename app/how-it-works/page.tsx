@@ -107,7 +107,7 @@ export default function HowItWorksPage() {
                 <Button
                   variant={p.featured ? "primary" : "outline"}
                   className="mt-6 w-full"
-                  href="/photographers"
+                  href="/signup"
                 >
                   {p.cta}
                 </Button>
