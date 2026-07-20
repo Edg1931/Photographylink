@@ -1,18 +1,14 @@
 import { notFound } from "next/navigation";
 import Link from "next/link";
-import {
-  companies,
-  getCompany,
-  getPhotographer,
-  jobsForCompany,
-} from "@/lib/data";
+import { getPhotographer } from "@/lib/data";
+import { getCompany } from "@/lib/backend";
+import { listJobs } from "@/lib/store";
 import { Container, Badge, Button, Stars, Avatar } from "@/components/ui";
 import { JobCard } from "@/components/JobCard";
+import { InquireButton } from "@/components/InquireButton";
 import { brand } from "@/lib/brand";
 
-export function generateStaticParams() {
-  return companies.map((c) => ({ slug: c.slug }));
-}
+export const dynamic = "force-dynamic";
 
 export function generateMetadata({ params }: { params: { slug: string } }) {
   const c = getCompany(params.slug);
@@ -34,7 +30,7 @@ export default function CompanyPage({
   if (!c) notFound();
 
   const accent = c.accent;
-  const jobs = jobsForCompany(c.slug);
+  const jobs = listJobs().filter((j) => j.companySlug === c.slug);
   const openCount = jobs.filter((j) => j.status === "open").length;
 
   return (
@@ -75,13 +71,8 @@ export default function CompanyPage({
               </div>
             </div>
             <div className="flex gap-2 pb-1">
-              <Button
-                className="text-ink-950"
-                variant="primary"
-              >
-                Apply to shoot here
-              </Button>
-              <Button variant="outline">Follow</Button>
+              <InquireButton companySlug={c.slug} companyName={c.name} />
+              <Button variant="outline">Apply to shoot</Button>
             </div>
           </div>
         </Container>
@@ -119,6 +110,37 @@ export default function CompanyPage({
             <p className="mt-4 max-w-2xl text-lg leading-relaxed text-bone/70">
               {c.about}
             </p>
+
+            {/* Offerings & pricing */}
+            {c.offerings.length > 0 && (
+              <>
+                <h2 className="mt-10 font-display text-2xl font-semibold">
+                  Services & pricing
+                </h2>
+                <div className="mt-5 grid gap-3 sm:grid-cols-2">
+                  {c.offerings.map((o) => (
+                    <div
+                      key={o.title}
+                      className="rounded-2xl border border-ink-700 bg-ink-900 p-5"
+                    >
+                      <div className="flex items-start justify-between gap-3">
+                        <h3 className="font-semibold text-bone">{o.title}</h3>
+                        <div className="shrink-0 text-right">
+                          <span
+                            className="font-display text-xl font-semibold"
+                            style={{ color: accent }}
+                          >
+                            ${o.price}
+                          </span>
+                          <p className="text-[11px] text-bone/45">{o.unit}</p>
+                        </div>
+                      </div>
+                      <p className="mt-2 text-sm text-bone/60">{o.blurb}</p>
+                    </div>
+                  ))}
+                </div>
+              </>
+            )}
 
             {/* Showcase gallery */}
             <h2 className="mt-10 font-display text-2xl font-semibold">

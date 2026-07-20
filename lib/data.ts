@@ -44,6 +44,13 @@ export interface QueueSlot {
   status: "trained" | "onboarding";
 }
 
+export interface Offering {
+  title: string;
+  price: number;
+  unit: string; // e.g. "per listing", "per shoot", "add-on"
+  blurb: string;
+}
+
 export interface Company {
   slug: string;
   name: string;
@@ -62,6 +69,7 @@ export interface Company {
   equipmentPolicy: EquipmentPolicy;
   equipmentNotes: string;
   perks: string[];
+  offerings: Offering[]; // productized services shown on the micro-site
   bench: QueueSlot[]; // the "stable" of trained photographers
   showcase: { src: string; label: string }[];
 }
@@ -292,6 +300,32 @@ export const companies: Company[] = [
       "We handle all client comms & scheduling",
       "Editing done in-house — you just shoot",
     ],
+    offerings: [
+      {
+        title: "Standard listing package",
+        price: 189,
+        unit: "per listing",
+        blurb: "25–35 HDR stills, next-day delivery.",
+      },
+      {
+        title: "Premium + twilight",
+        price: 289,
+        unit: "per listing",
+        blurb: "Full gallery plus 6 twilight composites.",
+      },
+      {
+        title: "Drone / aerial add-on",
+        price: 120,
+        unit: "add-on",
+        blurb: "8–10 aerial frames, FAA-certified pilots.",
+      },
+      {
+        title: "Listing video reel",
+        price: 350,
+        unit: "per shoot",
+        blurb: "90-second vertical + horizontal cutdowns.",
+      },
+    ],
     bench: [
       { photographerSlug: "maya-okafor", status: "trained" },
       { photographerSlug: "diego-navarro", status: "trained" },
@@ -331,6 +365,26 @@ export const companies: Company[] = [
       "Luxury & new-construction portfolio",
       "Creative freedom within brand guides",
       "Direct line to the studio lead",
+    ],
+    offerings: [
+      {
+        title: "Architectural stills",
+        price: 550,
+        unit: "per shoot",
+        blurb: "40+ magazine-grade frames, tilt-shift corrected.",
+      },
+      {
+        title: "Cinematic listing film",
+        price: 900,
+        unit: "per shoot",
+        blurb: "Graded 90s film + social cutdowns in 48h.",
+      },
+      {
+        title: "Matterport 3D tour",
+        price: 300,
+        unit: "add-on",
+        blurb: "Full dollhouse tour + floor plan.",
+      },
     ],
     bench: [
       { photographerSlug: "theo-brandt", status: "trained" },

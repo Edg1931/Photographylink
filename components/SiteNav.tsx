@@ -1,20 +1,28 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Container, Button } from "@/components/ui";
 import { brand } from "@/lib/brand";
 import { clsx } from "@/lib/clsx";
 
 const links = [
   { href: "/photographers", label: "Find photographers" },
-  { href: "/companies/lumen-estates", label: "For companies" },
+  { href: "/companies", label: "Hire a studio" },
   { href: "/jobs", label: "Job queue" },
   { href: "/how-it-works", label: "How it works" },
 ];
 
 export function SiteNav() {
   const [open, setOpen] = useState(false);
+  const [signedIn, setSignedIn] = useState<boolean | null>(null);
+
+  useEffect(() => {
+    fetch("/api/auth/me")
+      .then((r) => r.json())
+      .then((d) => setSignedIn(!!d.account))
+      .catch(() => setSignedIn(false));
+  }, []);
 
   return (
     <header className="sticky top-0 z-50 border-b border-ink-700/70 bg-ink-950/80 backdrop-blur-xl">
@@ -46,15 +54,23 @@ export function SiteNav() {
         </nav>
 
         <div className="flex items-center gap-2">
-          <Link
-            href="/photographers"
-            className="hidden text-sm font-medium text-bone/70 hover:text-bone sm:block"
-          >
-            Log in
-          </Link>
-          <Button href="/how-it-works" className="hidden px-4 py-2 sm:inline-flex">
-            Get started
-          </Button>
+          {signedIn ? (
+            <Button href="/dashboard" className="hidden px-4 py-2 sm:inline-flex">
+              Dashboard
+            </Button>
+          ) : (
+            <>
+              <Link
+                href="/login"
+                className="hidden text-sm font-medium text-bone/70 hover:text-bone sm:block"
+              >
+                Log in
+              </Link>
+              <Button href="/signup" className="hidden px-4 py-2 sm:inline-flex">
+                Get started
+              </Button>
+            </>
+          )}
           <button
             aria-label="Toggle menu"
             aria-expanded={open}
@@ -85,10 +101,11 @@ export function SiteNav() {
             </Link>
           ))}
           <Button
-            href="/how-it-works"
+            href={signedIn ? "/dashboard" : "/signup"}
             className="mt-2 w-full"
+            onClick={() => setOpen(false)}
           >
-            Get started
+            {signedIn ? "Dashboard" : "Get started"}
           </Button>
         </Container>
       </div>
