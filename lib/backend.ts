@@ -1,111 +1,76 @@
 // -----------------------------------------------------------------------------
-// Prototype backend: accounts, sessions, editable companies, and inquiries.
+// Data-access layer. Exposes ONE async API to the app. Internally it uses
+// Supabase when configured (NEXT_PUBLIC_SUPABASE_URL + SUPABASE_SERVICE_ROLE_KEY)
+// and otherwise falls back to an in-memory singleton so the app works before
+// Supabase is provisioned.
 //
-// This is the application's data-access layer. Today it is an in-memory
-// singleton (state lives for the life of the Node server process — great for a
-// single-instance demo, resets on restart / not shared across serverless
-// lambdas). It is deliberately shaped so that swapping to Supabase means
-// re-implementing THESE functions against Postgres + Supabase Auth, with the
-// API routes and UI untouched:
+//   Supabase path  -> lib/supabase-repo.ts (Postgres)
+//   Fallback path  -> the in-memory maps below
 //
-//   listCompanies()      -> select * from companies
-//   getCompany(slug)     -> select ... where slug = $1
-//   updateCompany(...)   -> update companies set ... where slug = $1 (owner check via RLS)
-//   signUp / logIn       -> supabase.auth.signUp / signInWithPassword
-//   createInquiry(...)   -> insert into inquiries ...  (+ email via edge function)
-//
-// Auth here is demo-grade (sha256, in-memory sessions) — NOT production. Real
-// auth comes with the Supabase swap.
+// Swapping is transparent to callers: every export is async.
 // -----------------------------------------------------------------------------
 
 import { createHash, randomUUID } from "crypto";
+import { companies as seedCompanies, Company } from "./data";
+import { getSupabase } from "./supabase";
+import * as repo from "./supabase-repo";
 import {
-  companies as seedCompanies,
-  Company,
-  Offering,
-} from "./data";
+  Account,
+  Inquiry,
+  Role,
+  CompanyPatch,
+  NewInquiry,
+  SignUpInput,
+  AuthResult,
+} from "./backend-types";
 
-export type Role = "company" | "photographer";
+export type { Account, Inquiry, Role, CompanyPatch, NewInquiry, SignUpInput, AuthResult };
 
-export interface Account {
-  id: string;
-  email: string;
-  passwordHash: string;
-  role: Role;
-  displayName: string;
-  companySlug?: string; // for company accounts
-  createdAt: number;
-}
-
-export interface Inquiry {
-  id: string;
-  companySlug: string;
-  name: string;
-  email: string;
-  projectType: string;
-  message: string;
-  createdAt: number;
-  read: boolean;
-}
-
-// ---- State ------------------------------------------------------------------
+// ---- In-memory fallback state ----------------------------------------------
 
 let companiesState: Company[] = clone(seedCompanies);
-const accounts = new Map<string, Account>(); // id -> account
-const emailIndex = new Map<string, string>(); // email -> account id
-const sessions = new Map<string, string>(); // token -> account id
+const accounts = new Map<string, Account>();
+const emailIndex = new Map<string, string>();
+const sessions = new Map<string, string>();
 let inquiries: Inquiry[] = [];
 
 function clone<T>(v: T): T {
   return JSON.parse(JSON.stringify(v));
 }
-
 function hash(pw: string): string {
   return createHash("sha256").update(`pl::${pw}`).digest("hex");
 }
-
-function slugify(input: string): string {
-  const base = input
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/^-+|-+$/g, "")
-    .slice(0, 40) || "studio";
-  let slug = base;
-  let n = 2;
-  while (companiesState.some((c) => c.slug === slug)) slug = `${base}-${n++}`;
-  return slug;
+function slugBase(input: string): string {
+  return (
+    input
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, "-")
+      .replace(/^-+|-+$/g, "")
+      .slice(0, 40) || "studio"
+  );
 }
 
 // ---- Companies --------------------------------------------------------------
 
-export function listCompanies(): Company[] {
+export async function listCompanies(): Promise<Company[]> {
+  const sb = getSupabase();
+  if (sb) return repo.listCompanies(sb);
   return clone(companiesState);
 }
 
-export function getCompany(slug: string): Company | undefined {
+export async function getCompany(slug: string): Promise<Company | undefined> {
+  const sb = getSupabase();
+  if (sb) return repo.getCompany(sb, slug);
   const c = companiesState.find((x) => x.slug === slug);
   return c ? clone(c) : undefined;
 }
 
-// Fields an owner may edit from the dashboard.
-export interface CompanyPatch {
-  tagline?: string;
-  about?: string;
-  accent?: string;
-  location?: string;
-  baseDayRate?: number;
-  equipmentPolicy?: Company["equipmentPolicy"];
-  equipmentNotes?: string;
-  markets?: string[];
-  specialties?: Company["specialties"];
-  offerings?: Offering[];
-  perks?: string[];
-}
-
-export function updateCompany(
+export async function updateCompany(
   slug: string,
   patch: CompanyPatch,
-): Company | undefined {
+): Promise<Company | undefined> {
+  const sb = getSupabase();
+  if (sb) return repo.updateCompany(sb, slug, patch);
   const c = companiesState.find((x) => x.slug === slug);
   if (!c) return undefined;
   Object.assign(c, patch);
@@ -114,19 +79,10 @@ export function updateCompany(
 
 // ---- Accounts / sessions ----------------------------------------------------
 
-export interface SignUpInput {
-  email: string;
-  password: string;
-  role: Role;
-  displayName: string;
-  companyName?: string;
-}
+export async function signUp(input: SignUpInput): Promise<AuthResult> {
+  const sb = getSupabase();
+  if (sb) return repo.signUp(sb, input, newCompanyRecord, slugBase);
 
-export type AuthResult =
-  | { ok: true; token: string; account: Account }
-  | { ok: false; error: string };
-
-export function signUp(input: SignUpInput): AuthResult {
   const email = input.email.trim().toLowerCase();
   if (!email || !input.password) return { ok: false, error: "Email and password required" };
   if (emailIndex.has(email)) return { ok: false, error: "That email already has an account" };
@@ -140,15 +96,15 @@ export function signUp(input: SignUpInput): AuthResult {
     displayName: input.displayName || email.split("@")[0],
     createdAt: Date.now(),
   };
-
   if (input.role === "company") {
     const name = input.companyName?.trim() || `${account.displayName}'s Studio`;
-    const slug = slugify(name);
-    const company = newCompanyRecord(name, slug, account.displayName);
-    companiesState = [company, ...companiesState];
+    const base = slugBase(name);
+    let slug = base;
+    let n = 2;
+    while (companiesState.some((c) => c.slug === slug)) slug = `${base}-${n++}`;
+    companiesState = [newCompanyRecord(name, slug, account.displayName), ...companiesState];
     account.companySlug = slug;
   }
-
   accounts.set(id, account);
   emailIndex.set(email, id);
   const token = randomUUID();
@@ -156,7 +112,10 @@ export function signUp(input: SignUpInput): AuthResult {
   return { ok: true, token, account: clone(account) };
 }
 
-export function logIn(email: string, password: string): AuthResult {
+export async function logIn(email: string, password: string): Promise<AuthResult> {
+  const sb = getSupabase();
+  if (sb) return repo.logIn(sb, email, password);
+
   const id = emailIndex.get(email.trim().toLowerCase());
   const account = id ? accounts.get(id) : undefined;
   if (!account || account.passwordHash !== hash(password)) {
@@ -167,12 +126,18 @@ export function logIn(email: string, password: string): AuthResult {
   return { ok: true, token, account: clone(account) };
 }
 
-export function logOut(token: string): void {
+export async function logOut(token: string): Promise<void> {
+  const sb = getSupabase();
+  if (sb) return repo.logOut(sb, token);
   sessions.delete(token);
 }
 
-export function accountFromToken(token: string | undefined): Account | undefined {
+export async function accountFromToken(
+  token: string | undefined,
+): Promise<Account | undefined> {
   if (!token) return undefined;
+  const sb = getSupabase();
+  if (sb) return repo.accountFromToken(sb, token);
   const id = sessions.get(token);
   const acct = id ? accounts.get(id) : undefined;
   return acct ? clone(acct) : undefined;
@@ -180,51 +145,32 @@ export function accountFromToken(token: string | undefined): Account | undefined
 
 // ---- Inquiries --------------------------------------------------------------
 
-export interface NewInquiry {
-  companySlug: string;
-  name: string;
-  email: string;
-  projectType: string;
-  message: string;
-}
-
-export function createInquiry(input: NewInquiry): Inquiry {
+export async function createInquiry(input: NewInquiry): Promise<Inquiry> {
+  const sb = getSupabase();
+  if (sb) return repo.createInquiry(sb, input);
   const inquiry: Inquiry = {
     id: `inq-${randomUUID().slice(0, 8)}`,
-    companySlug: input.companySlug,
-    name: input.name,
-    email: input.email,
-    projectType: input.projectType,
-    message: input.message,
+    ...input,
     createdAt: Date.now(),
     read: false,
   };
   inquiries = [inquiry, ...inquiries];
-  // Where a real email/notification would fire (platform + company):
-  // await sendEmail(PLATFORM_INBOX, ...); await sendEmail(companyOwnerEmail, ...);
   return clone(inquiry);
 }
 
-export function listInquiries(companySlug?: string): Inquiry[] {
+export async function listInquiries(companySlug?: string): Promise<Inquiry[]> {
+  const sb = getSupabase();
+  if (sb) return repo.listInquiries(sb, companySlug);
   const list = companySlug
     ? inquiries.filter((i) => i.companySlug === companySlug)
     : inquiries;
   return clone(list);
 }
 
-export function inquiryCount(companySlug?: string): number {
-  return companySlug
-    ? inquiries.filter((i) => i.companySlug === companySlug).length
-    : inquiries.length;
-}
-
 // ---- Helpers ----------------------------------------------------------------
 
-function newCompanyRecord(
-  name: string,
-  slug: string,
-  ownerName: string,
-): Company {
+function newCompanyRecord(name: string, slug: string, ownerName: string): Company {
+  void ownerName;
   const covers = [
     "https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&w=1600&q=80",
     "https://images.unsplash.com/photo-1600607687939-ce8a6c25118c?auto=format&fit=crop&w=1600&q=80",

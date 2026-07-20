@@ -10,8 +10,12 @@ import { brand } from "@/lib/brand";
 
 export const dynamic = "force-dynamic";
 
-export function generateMetadata({ params }: { params: { slug: string } }) {
-  const c = getCompany(params.slug);
+export async function generateMetadata({
+  params,
+}: {
+  params: { slug: string };
+}) {
+  const c = await getCompany(params.slug);
   return { title: c ? `${c.name} · ${brand.name}` : "Company" };
 }
 
@@ -21,16 +25,17 @@ const policyCopy = {
   either: "Gear provided or BYO",
 };
 
-export default function CompanyPage({
+export default async function CompanyPage({
   params,
 }: {
   params: { slug: string };
 }) {
-  const c = getCompany(params.slug);
+  const c = await getCompany(params.slug);
   if (!c) notFound();
 
   const accent = c.accent;
-  const jobs = listJobs().filter((j) => j.companySlug === c.slug);
+  const allJobs = await listJobs();
+  const jobs = allJobs.filter((j) => j.companySlug === c.slug);
   const openCount = jobs.filter((j) => j.status === "open").length;
 
   return (

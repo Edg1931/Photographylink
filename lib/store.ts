@@ -1,20 +1,24 @@
 // -----------------------------------------------------------------------------
-// In-memory job store with ATOMIC claim semantics.
+// Job store with ATOMIC claim semantics.
 //
-// This is the real thing the product hinges on: when a company drops a job into
-// the queue and its whole bench is notified, *exactly one* photographer may win
-// the claim — even if five of them tap "Claim" in the same instant.
+// Supabase path: jobs live in Postgres; claims run through the claim_job()
+// function (a single conditional UPDATE) — atomic at the database level, exactly
+// what production needs.
 //
-// There is no database here yet (by design — we're validating feel first). State
-// lives in a module-level singleton that persists for the life of the Node
-// server process. The concurrency guarantee is provided by an async mutex that
-// serializes the read-modify-write, so the critical section behaves exactly like
-// a Postgres `UPDATE jobs SET claimed_by=$1 WHERE id=$2 AND claimed_by IS NULL`
-// (or `SELECT ... FOR UPDATE`) would. When we move to Supabase, this file is the
-// only thing that changes — the API and UI stay identical.
+// Fallback path (no Supabase configured): an in-memory singleton with an async
+// mutex that serializes the read-check-write, giving the same "exactly one
+// winner" guarantee for the local/demo experience.
+//
+// Either way the API routes and UI are identical.
 // -----------------------------------------------------------------------------
 
+import { randomUUID } from "crypto";
 import { jobs as seedJobs, Job, getCompany } from "./data";
+import { getSupabase } from "./supabase";
+import * as repo from "./supabase-repo";
+import { NewJobInput } from "./backend-types";
+
+export type { NewJobInput };
 
 export interface ClaimEvent {
   at: number;
@@ -26,84 +30,86 @@ export interface ClaimEvent {
 
 export type ClaimResult =
   | { ok: true; job: Job }
-  | {
-      ok: false;
-      reason: "not_found" | "not_open" | "already_claimed" | "reserved";
-      job?: Job;
-    };
+  | { ok: false; reason: "not_found" | "not_open" | "already_claimed" | "reserved"; job?: Job };
 
-// ---- Mutable state (the "database") ----------------------------------------
+// ---- In-memory fallback state ----------------------------------------------
 
 let jobsState: Job[] = clone(seedJobs);
 let claimLog: ClaimEvent[] = [];
-let idCounter = 5000;
 
 function clone<T>(v: T): T {
   return JSON.parse(JSON.stringify(v));
 }
 
-// ---- Async mutex ------------------------------------------------------------
-// A single promise chain. Each critical section awaits the previous one, so the
-// read-check-write below can never interleave with another claim. This is what
-// makes the claim atomic despite `await`s inside it.
+// ---- Async mutex (fallback path) -------------------------------------------
 
 let tail: Promise<unknown> = Promise.resolve();
-
 function withLock<T>(fn: () => Promise<T> | T): Promise<T> {
   const result = tail.then(fn);
-  // Keep the chain alive even if a section throws.
   tail = result.then(
     () => undefined,
     () => undefined,
   );
   return result;
 }
-
 function delay(ms: number) {
   return new Promise((r) => setTimeout(r, ms));
 }
 
+function recordClaim(
+  jobId: string,
+  photographerSlug: string,
+  outcome: "won" | "lost",
+  reason?: string,
+) {
+  claimLog.push({ at: Date.now(), jobId, photographerSlug, outcome, reason });
+  if (claimLog.length > 200) claimLog = claimLog.slice(-200);
+}
+
 // ---- Reads ------------------------------------------------------------------
 
-export function listJobs(): Job[] {
+export async function listJobs(): Promise<Job[]> {
+  const sb = getSupabase();
+  if (sb) return repo.listJobs(sb);
   return clone(jobsState);
 }
 
 export function listClaimLog(): ClaimEvent[] {
-  return clone(claimLog).sort((a, b) => b.at - a.at).slice(0, 40);
+  return clone(claimLog)
+    .sort((a, b) => b.at - a.at)
+    .slice(0, 40);
 }
 
-// ---- Writes -----------------------------------------------------------------
+// ---- Claim ------------------------------------------------------------------
 
-/**
- * Attempt to claim a job for a photographer. Atomic: concurrent callers are
- * serialized, and only the first to reach the still-open job wins. The
- * artificial latency models real DB round-trip time and makes the race genuine —
- * without the lock, two callers could both observe "open" before either writes.
- */
-export function claimJob(
+export async function claimJob(
   jobId: string,
   photographerSlug: string,
 ): Promise<ClaimResult> {
+  const sb = getSupabase();
+  if (sb) {
+    const r = await repo.claimJob(sb, jobId, photographerSlug);
+    recordClaim(
+      jobId,
+      photographerSlug,
+      r.ok ? "won" : "lost",
+      r.ok ? undefined : r.reason,
+    );
+    return r as ClaimResult;
+  }
+
   return withLock(async () => {
     const job = jobsState.find((j) => j.id === jobId);
-    if (!job) {
-      return { ok: false, reason: "not_found" as const };
-    }
+    if (!job) return { ok: false, reason: "not_found" as const };
     if (job.status !== "open") {
       recordClaim(jobId, photographerSlug, "lost", "not_open");
       return { ok: false, reason: "already_claimed" as const, job: clone(job) };
     }
-    // A direct offer can only be accepted by the photographer it was offered to.
     if (job.assignedToSlug && job.assignedToSlug !== photographerSlug) {
       recordClaim(jobId, photographerSlug, "lost", "reserved");
       return { ok: false, reason: "reserved" as const, job: clone(job) };
     }
-
-    // --- critical section (serialized by the mutex) ---
-    await delay(140); // simulated DB write latency
-    // Re-check under the lock. Guaranteed still valid because nothing else can
-    // run between the check above and the write below.
+    await delay(140);
     if (job.status !== "open") {
       recordClaim(jobId, photographerSlug, "lost", "already_claimed");
       return { ok: false, reason: "already_claimed" as const, job: clone(job) };
@@ -112,7 +118,6 @@ export function claimJob(
       recordClaim(jobId, photographerSlug, "lost", "reserved");
       return { ok: false, reason: "reserved" as const, job: clone(job) };
     }
-
     job.status = "claimed";
     job.claimedBySlug = photographerSlug;
     job.postedAgo = "just now";
@@ -121,34 +126,33 @@ export function claimJob(
   });
 }
 
-/**
- * Directly offer an open job to one photographer. Only they can then accept it;
- * everyone else is rejected with `reserved`. Re-assigning is allowed while the
- * job is still open.
- */
-export function assignJob(
+// ---- Assign / decline -------------------------------------------------------
+
+export async function assignJob(
   jobId: string,
   photographerSlug: string,
 ): Promise<ClaimResult> {
+  const sb = getSupabase();
+  if (sb) return (await repo.assignJob(sb, jobId, photographerSlug)) as ClaimResult;
   return withLock(() => {
     const job = jobsState.find((j) => j.id === jobId);
     if (!job) return { ok: false, reason: "not_found" as const };
-    if (job.status !== "open") {
-      return { ok: false, reason: "not_open" as const, job: clone(job) };
-    }
+    if (job.status !== "open") return { ok: false, reason: "not_open" as const, job: clone(job) };
     job.assignedToSlug = photographerSlug;
     return { ok: true as const, job: clone(job) };
   });
 }
 
-/**
- * The offered photographer declines a direct offer, releasing the job back to
- * the whole bench (it becomes a normal open, claimable job).
- */
-export function declineJob(
+export async function declineJob(
   jobId: string,
   photographerSlug: string,
 ): Promise<ClaimResult> {
+  const sb = getSupabase();
+  if (sb) {
+    const r = (await repo.declineJob(sb, jobId, photographerSlug)) as ClaimResult;
+    if (r.ok) recordClaim(jobId, photographerSlug, "lost", "declined");
+    return r;
+  }
   return withLock(() => {
     const job = jobsState.find((j) => j.id === jobId);
     if (!job) return { ok: false, reason: "not_found" as const };
@@ -161,8 +165,9 @@ export function declineJob(
   });
 }
 
-/** Advance a claimed job to scheduled, or a scheduled job to delivered. */
-export function advanceJob(jobId: string): Promise<ClaimResult> {
+export async function advanceJob(jobId: string): Promise<ClaimResult> {
+  const sb = getSupabase();
+  if (sb) return (await repo.advanceJob(sb, jobId)) as ClaimResult;
   return withLock(() => {
     const job = jobsState.find((j) => j.id === jobId);
     if (!job) return { ok: false, reason: "not_found" as const };
@@ -172,65 +177,47 @@ export function advanceJob(jobId: string): Promise<ClaimResult> {
   });
 }
 
-export interface NewJobInput {
-  companySlug: string;
-  title: string;
-  type: Job["type"];
-  neighborhood: string;
-  payout: number;
-  durationHours: number;
-  shootAt: string;
-  deliverables: string;
-  equipment: Job["equipment"];
-  urgency: Job["urgency"];
-  // Optional: post the job as a direct offer to one photographer.
-  assignedToSlug?: string;
-}
+// ---- Post / reset -----------------------------------------------------------
 
-/** Post a fresh job to the top of the queue. */
-export function postJob(input: NewJobInput): Promise<Job> {
+export async function postJob(input: NewJobInput): Promise<Job> {
+  const job: Job = {
+    id: `job-${randomUUID().slice(0, 8)}`,
+    companySlug: (await hasCompany(input.companySlug))
+      ? input.companySlug
+      : seedJobs[0].companySlug,
+    title: input.title || "Untitled shoot",
+    type: input.type,
+    address: "Address on claim",
+    neighborhood: input.neighborhood || "Austin",
+    shootAt: input.shootAt || "Flexible",
+    postedAgo: "just now",
+    durationHours: input.durationHours || 2,
+    payout: input.payout || 200,
+    deliverables: input.deliverables || "Standard listing gallery",
+    equipment: input.equipment,
+    status: "open",
+    assignedToSlug: input.assignedToSlug || undefined,
+    urgency: input.urgency,
+  };
+  const sb = getSupabase();
+  if (sb) return repo.postJob(sb, job);
   return withLock(() => {
-    idCounter += 1;
-    const job: Job = {
-      id: `job-${idCounter}`,
-      companySlug: getCompany(input.companySlug)
-        ? input.companySlug
-        : seedJobs[0].companySlug,
-      title: input.title || "Untitled shoot",
-      type: input.type,
-      address: "Address on claim",
-      neighborhood: input.neighborhood || "Austin",
-      shootAt: input.shootAt || "Flexible",
-      postedAgo: "just now",
-      durationHours: input.durationHours || 2,
-      payout: input.payout || 200,
-      deliverables: input.deliverables || "Standard listing gallery",
-      equipment: input.equipment,
-      status: "open",
-      assignedToSlug: input.assignedToSlug || undefined,
-      urgency: input.urgency,
-    };
     jobsState = [job, ...jobsState];
     return clone(job);
   });
 }
 
-/** Reset the demo back to the seed data. */
-export function resetDemo(): Promise<{ ok: true }> {
+export async function resetDemo(): Promise<{ ok: true }> {
+  // Only resets the in-memory demo. With Supabase, jobs persist by design.
   return withLock(() => {
     jobsState = clone(seedJobs);
     claimLog = [];
-    idCounter = 5000;
     return { ok: true as const };
   });
 }
 
-function recordClaim(
-  jobId: string,
-  photographerSlug: string,
-  outcome: "won" | "lost",
-  reason?: string,
-) {
-  claimLog.push({ at: Date.now(), jobId, photographerSlug, outcome, reason });
-  if (claimLog.length > 200) claimLog = claimLog.slice(-200);
+async function hasCompany(slug: string): Promise<boolean> {
+  const sb = getSupabase();
+  if (sb) return Boolean(await repo.getCompany(sb, slug));
+  return Boolean(getCompany(slug));
 }

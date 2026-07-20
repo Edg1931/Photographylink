@@ -9,15 +9,15 @@ import { brand } from "@/lib/brand";
 export const dynamic = "force-dynamic";
 export const metadata = { title: `Dashboard · ${brand.name}` };
 
-export default function DashboardPage() {
-  const account = currentAccount();
+export default async function DashboardPage() {
+  const account = await currentAccount();
   if (!account) redirect("/login");
 
   // Company owners get the full control center.
   if (account.role === "company" && account.companySlug) {
-    const company = getCompany(account.companySlug);
+    const company = await getCompany(account.companySlug);
     if (!company) redirect("/login");
-    const inquiries = listInquiries(account.companySlug);
+    const inquiries = await listInquiries(account.companySlug);
     return (
       <Container className="py-10 lg:py-14">
         <Dashboard

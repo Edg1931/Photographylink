@@ -5,6 +5,6 @@ export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
 
 export async function GET() {
-  const account = currentAccount();
+  const account = await currentAccount();
   return NextResponse.json({ account: account ?? null });
 }

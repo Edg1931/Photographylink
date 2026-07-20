@@ -14,7 +14,7 @@ export async function POST(req: Request) {
       { status: 400 },
     );
   }
-  const inquiry = createInquiry({
+  const inquiry = await createInquiry({
     companySlug: body.companySlug,
     name: body.name,
     email: body.email,
@@ -29,14 +29,14 @@ export async function POST(req: Request) {
 export async function GET(req: Request) {
   const url = new URL(req.url);
   const scope = url.searchParams.get("scope");
-  const account = currentAccount();
+  const account = await currentAccount();
 
   if (scope === "all") {
-    return NextResponse.json({ inquiries: listInquiries() });
+    return NextResponse.json({ inquiries: await listInquiries() });
   }
   if (account?.role === "company" && account.companySlug) {
     return NextResponse.json({
-      inquiries: listInquiries(account.companySlug),
+      inquiries: await listInquiries(account.companySlug),
     });
   }
   return NextResponse.json({ inquiries: [] });

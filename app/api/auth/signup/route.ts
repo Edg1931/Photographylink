@@ -13,7 +13,7 @@ export async function POST(req: Request) {
       { status: 400 },
     );
   }
-  const result = signUp({
+  const result = await signUp({
     email: body.email,
     password: body.password,
     role: body.role,

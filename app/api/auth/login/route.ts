@@ -16,7 +16,7 @@ export async function POST(req: Request) {
       { status: 400 },
     );
   }
-  const result = logIn(body.email, body.password);
+  const result = await logIn(body.email, body.password);
   if (!result.ok) {
     return NextResponse.json(result, { status: 401 });
   }

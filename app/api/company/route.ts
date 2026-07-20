@@ -6,7 +6,7 @@ export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
 
 export async function PATCH(req: Request) {
-  const account = currentAccount();
+  const account = await currentAccount();
   if (!account || account.role !== "company" || !account.companySlug) {
     return NextResponse.json(
       { ok: false, error: "Not signed in as a company" },
@@ -14,7 +14,7 @@ export async function PATCH(req: Request) {
     );
   }
   const patch = (await req.json().catch(() => ({}))) as CompanyPatch;
-  const company = updateCompany(account.companySlug, patch);
+  const company = await updateCompany(account.companySlug, patch);
   if (!company) {
     return NextResponse.json(
       { ok: false, error: "Company not found" },

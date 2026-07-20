@@ -9,8 +9,8 @@ export const metadata = {
   title: `Photography companies · ${brand.name}`,
 };
 
-export default function CompaniesDirectory() {
-  const companies = listCompanies();
+export default async function CompaniesDirectory() {
+  const companies = await listCompanies();
 
   return (
     <>

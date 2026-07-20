@@ -1,6 +1,6 @@
 import Link from "next/link";
-import { Container, SectionLabel, Badge, Button } from "@/components/ui";
-import { listInquiries, getCompany } from "@/lib/backend";
+import { Container, SectionLabel, Badge } from "@/components/ui";
+import { listInquiries, listCompanies } from "@/lib/backend";
 import { brand } from "@/lib/brand";
 
 export const dynamic = "force-dynamic";
@@ -8,8 +8,12 @@ export const metadata = { title: `Platform inbox · ${brand.name}` };
 
 // The platform-side (admin) view of every inquiry across all companies.
 // In production this would sit behind an admin role; for the demo it's open.
-export default function InboxPage() {
-  const inquiries = listInquiries();
+export default async function InboxPage() {
+  const [inquiries, companies] = await Promise.all([
+    listInquiries(),
+    listCompanies(),
+  ]);
+  const companyBySlug = new Map(companies.map((c) => [c.slug, c]));
 
   return (
     <Container className="py-12 lg:py-16">
@@ -41,7 +45,7 @@ export default function InboxPage() {
           </div>
         ) : (
           inquiries.map((q) => {
-            const company = getCompany(q.companySlug);
+            const company = companyBySlug.get(q.companySlug);
             return (
               <div
                 key={q.id}
