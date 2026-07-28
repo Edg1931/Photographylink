@@ -29,6 +29,7 @@ create table if not exists public.companies (
   perks            text[] not null default '{}',
   offerings        jsonb not null default '[]',
   bench            jsonb not null default '[]',
+  members          jsonb not null default '[]',
   showcase         jsonb not null default '[]',
   owner_id         uuid,
   created_at       timestamptz not null default now()
@@ -73,11 +74,13 @@ create table if not exists public.jobs (
   payout         int not null default 200,
   deliverables   text not null default '',
   equipment      text not null default 'byo',
-  status         text not null default 'open',
-  claimed_by     text,
-  assigned_to    text,
-  urgency        text not null default 'standard',
-  created_at     timestamptz not null default now()
+  status          text not null default 'open',
+  claimed_by      text,
+  claimed_by_name text,
+  assigned_to     text,
+  date            text,
+  urgency         text not null default 'standard',
+  created_at      timestamptz not null default now()
 );
 create index if not exists jobs_company_idx on public.jobs (company_slug);
 create index if not exists jobs_status_idx on public.jobs (status);
@@ -117,7 +120,7 @@ create table if not exists public.sessions (
 -- ---------------------------------------------------------------------- claim
 -- Atomic claim as a single conditional UPDATE. Exactly one caller can flip an
 -- open job to claimed; a direct offer can only be claimed by its assignee.
-create or replace function public.claim_job(p_id text, p_slug text)
+create or replace function public.claim_job(p_id text, p_slug text, p_name text default null)
 returns public.jobs
 language plpgsql
 as $$
@@ -125,7 +128,10 @@ declare
   updated public.jobs;
 begin
   update public.jobs
-     set status = 'claimed', claimed_by = p_slug, posted_ago = 'just now'
+     set status = 'claimed',
+         claimed_by = p_slug,
+         claimed_by_name = coalesce(p_name, claimed_by_name),
+         posted_ago = 'just now'
    where id = p_id
      and status = 'open'
      and (assigned_to is null or assigned_to = p_slug)

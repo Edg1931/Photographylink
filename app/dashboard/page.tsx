@@ -4,6 +4,7 @@ import { Container, Button } from "@/components/ui";
 import { Dashboard } from "@/components/Dashboard";
 import { currentAccount } from "@/lib/session";
 import { getCompany, listInquiries } from "@/lib/backend";
+import { listJobs } from "@/lib/store";
 import { brand } from "@/lib/brand";
 
 export const dynamic = "force-dynamic";
@@ -17,13 +18,18 @@ export default async function DashboardPage() {
   if (account.role === "company" && account.companySlug) {
     const company = await getCompany(account.companySlug);
     if (!company) redirect("/login");
-    const inquiries = await listInquiries(account.companySlug);
+    const [inquiries, allJobs] = await Promise.all([
+      listInquiries(account.companySlug),
+      listJobs(),
+    ]);
+    const jobs = allJobs.filter((j) => j.companySlug === company.slug);
     return (
       <Container className="py-10 lg:py-14">
         <Dashboard
           account={{ displayName: account.displayName, email: account.email }}
           company={company}
           inquiries={inquiries}
+          jobs={jobs}
         />
       </Container>
     );

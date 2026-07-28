@@ -51,6 +51,19 @@ export interface Offering {
   blurb: string;
 }
 
+// A photographer on a company's bench. May be a full platform photographer
+// (photographerSlug set) or a simple roster entry the company added by hand.
+export interface Member {
+  id: string;
+  name: string;
+  email: string;
+  phone?: string;
+  rate?: number;
+  status: "active" | "invited";
+  avatar?: string;
+  photographerSlug?: string;
+}
+
 export interface Company {
   slug: string;
   name: string;
@@ -70,7 +83,8 @@ export interface Company {
   equipmentNotes: string;
   perks: string[];
   offerings: Offering[]; // productized services shown on the micro-site
-  bench: QueueSlot[]; // the "stable" of trained photographers
+  bench: QueueSlot[]; // the "stable" of trained photographers (seed/showcase)
+  members: Member[]; // the company's managed roster (dashboard)
   showcase: { src: string; label: string }[];
 }
 
@@ -90,10 +104,15 @@ export interface Job {
   deliverables: string;
   equipment: EquipmentPolicy;
   status: JobStatus;
+  // Claimer identity — a member id ("mem-…") or a photographer slug.
   claimedBySlug?: string;
-  // When set, the job is a DIRECT OFFER to one photographer — only they can
-  // accept it. They can decline, which releases it back to the whole bench.
+  claimedByName?: string;
+  // When set, the job is a DIRECT OFFER to one photographer/member — only they
+  // can accept it. They can decline, releasing it back to the whole bench.
   assignedToSlug?: string;
+  // Scheduled shoot time (ISO). When a dated job is claimed it becomes an
+  // appointment on the company and the photographer's calendar.
+  date?: string;
   urgency: "standard" | "rush" | "flexible";
 }
 
@@ -332,6 +351,12 @@ export const companies: Company[] = [
       { photographerSlug: "priya-raman", status: "trained" },
       { photographerSlug: "sam-whitfield", status: "onboarding" },
     ],
+    members: [
+      { id: "mem-maya", name: "Maya Okafor", email: "maya@lumenestates.co", phone: "512-555-0148", rate: 425, status: "active", avatar: "https://i.pravatar.cc/120?img=47", photographerSlug: "maya-okafor" },
+      { id: "mem-diego", name: "Diego Navarro", email: "diego@lumenestates.co", phone: "512-555-0132", rate: 500, status: "active", avatar: "https://i.pravatar.cc/120?img=12", photographerSlug: "diego-navarro" },
+      { id: "mem-priya", name: "Priya Raman", email: "priya@lumenestates.co", phone: "512-555-0119", rate: 350, status: "active", avatar: "https://i.pravatar.cc/120?img=45", photographerSlug: "priya-raman" },
+      { id: "mem-sam", name: "Sam Whitfield", email: "sam@lumenestates.co", rate: 650, status: "invited", avatar: "https://i.pravatar.cc/120?img=68", photographerSlug: "sam-whitfield" },
+    ],
     showcase: [
       { src: img("photo-1600585154340-be6161a56a0c"), label: "Signature twilight" },
       { src: img("photo-1600566753086-00f18fb6b3ea"), label: "Kitchen standard" },
@@ -391,6 +416,10 @@ export const companies: Company[] = [
       { photographerSlug: "harper-lin", status: "trained" },
       { photographerSlug: "sam-whitfield", status: "trained" },
     ],
+    members: [
+      { id: "mem-theo", name: "Theo Brandt", email: "theo@summitmedia.co", rate: 700, status: "active", avatar: "https://i.pravatar.cc/120?img=15", photographerSlug: "theo-brandt" },
+      { id: "mem-harper", name: "Harper Lin", email: "harper@summitmedia.co", rate: 380, status: "active", avatar: "https://i.pravatar.cc/120?img=32", photographerSlug: "harper-lin" },
+    ],
     showcase: [
       { src: img("photo-1600573472550-8090b5e0745e"), label: "Pool reveal" },
       { src: img("photo-1512917774080-9991f1c4c750"), label: "Modern facade" },
@@ -421,6 +450,7 @@ export const jobs: Job[] = [
     deliverables: "35 HDR stills + 6 twilight composites",
     equipment: "byo",
     status: "open",
+    date: "2026-07-29T10:00:00",
     urgency: "standard",
   },
   {
@@ -437,7 +467,8 @@ export const jobs: Job[] = [
     deliverables: "40 architectural stills + 4 twilight",
     equipment: "byo",
     status: "open",
-    assignedToSlug: "theo-brandt",
+    assignedToSlug: "mem-theo",
+    date: "2026-08-01T09:00:00",
     urgency: "standard",
   },
   {
@@ -454,6 +485,7 @@ export const jobs: Job[] = [
     deliverables: "25 stills + 8 aerial frames",
     equipment: "byo",
     status: "open",
+    date: "2026-07-28T16:30:00",
     urgency: "rush",
   },
   {
@@ -486,7 +518,9 @@ export const jobs: Job[] = [
     deliverables: "30 HDR stills",
     equipment: "either",
     status: "claimed",
-    claimedBySlug: "priya-raman",
+    claimedBySlug: "mem-priya",
+    claimedByName: "Priya Raman",
+    date: "2026-07-28T13:00:00",
     urgency: "standard",
   },
   {
@@ -503,7 +537,9 @@ export const jobs: Job[] = [
     deliverables: "45 stills + full 3D tour + floor plan",
     equipment: "byo",
     status: "scheduled",
-    claimedBySlug: "harper-lin",
+    claimedBySlug: "mem-harper",
+    claimedByName: "Harper Lin",
+    date: "2026-07-30T11:00:00",
     urgency: "standard",
   },
   {
@@ -520,7 +556,9 @@ export const jobs: Job[] = [
     deliverables: "6 twilight composites",
     equipment: "either",
     status: "delivered",
-    claimedBySlug: "maya-okafor",
+    claimedBySlug: "mem-maya",
+    claimedByName: "Maya Okafor",
+    date: "2026-07-27T20:15:00",
     urgency: "standard",
   },
 ];

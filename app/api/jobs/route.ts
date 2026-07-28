@@ -28,6 +28,7 @@ export async function POST(req: Request) {
     equipment: body.equipment ?? "byo",
     urgency: body.urgency ?? "standard",
     assignedToSlug: body.assignedToSlug || undefined,
+    date: body.date || undefined,
   });
   return NextResponse.json({ job }, { status: 201 });
 }

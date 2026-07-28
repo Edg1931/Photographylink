@@ -86,10 +86,11 @@ export function listClaimLog(): ClaimEvent[] {
 export async function claimJob(
   jobId: string,
   photographerSlug: string,
+  name?: string,
 ): Promise<ClaimResult> {
   const sb = getSupabase();
   if (sb) {
-    const r = await repo.claimJob(sb, jobId, photographerSlug);
+    const r = await repo.claimJob(sb, jobId, photographerSlug, name);
     recordClaim(
       jobId,
       photographerSlug,
@@ -121,6 +122,7 @@ export async function claimJob(
     }
     job.status = "claimed";
     job.claimedBySlug = photographerSlug;
+    if (name) job.claimedByName = name;
     job.postedAgo = "just now";
     recordClaim(jobId, photographerSlug, "won");
     return { ok: true as const, job: clone(job) };
@@ -198,6 +200,7 @@ export async function postJob(input: NewJobInput): Promise<Job> {
     equipment: input.equipment,
     status: "open",
     assignedToSlug: input.assignedToSlug || undefined,
+    date: input.date || undefined,
     urgency: input.urgency,
   };
   const sb = getSupabase();

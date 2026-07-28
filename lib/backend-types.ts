@@ -2,7 +2,7 @@
 // (backend.ts / store.ts) and the Supabase implementation (supabase-repo.ts).
 // Kept in their own module so the two implementations never import each other.
 
-import { Company, Job, Offering } from "./data";
+import { Company, Job, Offering, Member } from "./data";
 
 export type Role = "company" | "photographer";
 
@@ -39,6 +39,7 @@ export interface CompanyPatch {
   specialties?: Company["specialties"];
   offerings?: Offering[];
   perks?: string[];
+  members?: Member[];
 }
 
 export interface NewInquiry {
@@ -73,4 +74,5 @@ export interface NewJobInput {
   equipment: Job["equipment"];
   urgency: Job["urgency"];
   assignedToSlug?: string;
+  date?: string;
 }

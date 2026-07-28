@@ -52,6 +52,7 @@ function toCompany(r: any): Company {
     perks: r.perks ?? [],
     offerings: r.offerings ?? [],
     bench: r.bench ?? [],
+    members: r.members ?? [],
     showcase: r.showcase ?? [],
   };
 }
@@ -77,6 +78,7 @@ function companyRow(c: Company) {
     perks: c.perks,
     offerings: c.offerings,
     bench: c.bench,
+    members: c.members,
     showcase: c.showcase,
   };
 }
@@ -94,6 +96,7 @@ function patchRow(p: CompanyPatch) {
   if (p.specialties !== undefined) row.specialties = p.specialties;
   if (p.offerings !== undefined) row.offerings = p.offerings;
   if (p.perks !== undefined) row.perks = p.perks;
+  if (p.members !== undefined) row.members = p.members;
   return row;
 }
 
@@ -113,7 +116,9 @@ function toJob(r: any): Job {
     equipment: r.equipment,
     status: r.status,
     claimedBySlug: r.claimed_by ?? undefined,
+    claimedByName: r.claimed_by_name ?? undefined,
     assignedToSlug: r.assigned_to ?? undefined,
+    date: r.date ?? undefined,
     urgency: r.urgency,
   };
 }
@@ -134,7 +139,9 @@ function jobRow(j: Job) {
     equipment: j.equipment,
     status: j.status,
     claimed_by: j.claimedBySlug ?? null,
+    claimed_by_name: j.claimedByName ?? null,
     assigned_to: j.assignedToSlug ?? null,
+    date: j.date ?? null,
     urgency: j.urgency,
   };
 }
@@ -400,8 +407,13 @@ export async function claimJob(
   sb: SupabaseClient,
   jobId: string,
   slug: string,
+  name?: string,
 ): Promise<{ ok: boolean; reason?: string; job?: Job }> {
-  const { data } = await sb.rpc("claim_job", { p_id: jobId, p_slug: slug });
+  const { data } = await sb.rpc("claim_job", {
+    p_id: jobId,
+    p_slug: slug,
+    p_name: name ?? null,
+  });
   const row = Array.isArray(data) ? data[0] : data;
   if (row && row.id) return { ok: true, job: toJob(row) };
 

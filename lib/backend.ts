@@ -11,7 +11,7 @@
 // -----------------------------------------------------------------------------
 
 import { createHash, randomUUID } from "crypto";
-import { companies as seedCompanies, Company } from "./data";
+import { companies as seedCompanies, Company, Member } from "./data";
 import { getSupabase } from "./supabase";
 import * as repo from "./supabase-repo";
 import {
@@ -81,6 +81,52 @@ export async function updateCompany(
   if (!c) return undefined;
   Object.assign(c, patch);
   return clone(c);
+}
+
+// ---- Bench members ----------------------------------------------------------
+
+export interface AddMemberInput {
+  name: string;
+  email: string;
+  phone?: string;
+  rate?: number;
+}
+
+export async function addMember(
+  slug: string,
+  input: AddMemberInput,
+): Promise<Member | undefined> {
+  const company = await getCompany(slug);
+  if (!company) return undefined;
+  const member: Member = {
+    id: `mem-${randomUUID().slice(0, 6)}`,
+    name: input.name,
+    email: input.email,
+    phone: input.phone,
+    rate: input.rate,
+    status: "active",
+    avatar: `https://i.pravatar.cc/120?u=${encodeURIComponent(
+      input.email || input.name,
+    )}`,
+  };
+  await updateCompany(slug, { members: [...company.members, member] });
+  return member;
+}
+
+export async function removeMember(slug: string, memberId: string): Promise<void> {
+  const company = await getCompany(slug);
+  if (!company) return;
+  await updateCompany(slug, {
+    members: company.members.filter((m) => m.id !== memberId),
+  });
+}
+
+export async function getMember(
+  slug: string,
+  memberId: string,
+): Promise<Member | undefined> {
+  const company = await getCompany(slug);
+  return company?.members.find((m) => m.id === memberId);
 }
 
 // ---- Accounts / sessions ----------------------------------------------------
@@ -231,6 +277,7 @@ function newCompanyRecord(name: string, slug: string, ownerName: string): Compan
       },
     ],
     bench: [],
+    members: [],
     showcase,
   };
 }
