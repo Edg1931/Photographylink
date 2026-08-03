@@ -49,6 +49,9 @@ function toCompany(r: any): Company {
     baseDayRate: r.base_day_rate,
     equipmentPolicy: r.equipment_policy,
     equipmentNotes: r.equipment_notes,
+    wantsEquipment: r.wants_equipment ?? "",
+    wantsExperience: r.wants_experience ?? "",
+    payTerms: r.pay_terms ?? "",
     perks: r.perks ?? [],
     offerings: r.offerings ?? [],
     bench: r.bench ?? [],
@@ -75,6 +78,9 @@ function companyRow(c: Company) {
     base_day_rate: c.baseDayRate,
     equipment_policy: c.equipmentPolicy,
     equipment_notes: c.equipmentNotes,
+    wants_equipment: c.wantsEquipment,
+    wants_experience: c.wantsExperience,
+    pay_terms: c.payTerms,
     perks: c.perks,
     offerings: c.offerings,
     bench: c.bench,
@@ -92,6 +98,9 @@ function patchRow(p: CompanyPatch) {
   if (p.baseDayRate !== undefined) row.base_day_rate = p.baseDayRate;
   if (p.equipmentPolicy !== undefined) row.equipment_policy = p.equipmentPolicy;
   if (p.equipmentNotes !== undefined) row.equipment_notes = p.equipmentNotes;
+  if (p.wantsEquipment !== undefined) row.wants_equipment = p.wantsEquipment;
+  if (p.wantsExperience !== undefined) row.wants_experience = p.wantsExperience;
+  if (p.payTerms !== undefined) row.pay_terms = p.payTerms;
   if (p.markets !== undefined) row.markets = p.markets;
   if (p.specialties !== undefined) row.specialties = p.specialties;
   if (p.offerings !== undefined) row.offerings = p.offerings;
@@ -213,6 +222,7 @@ async function doSeed(sb: SupabaseClient): Promise<void> {
       day_rate: p.dayRate,
       half_day_rate: p.halfDayRate,
       available_now: p.availableNow,
+      experience_years: p.experienceYears,
       owns_gear: p.ownsGear,
       networks: p.networks,
       portfolio: p.portfolio,

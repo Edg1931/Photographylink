@@ -129,6 +129,65 @@ export async function getMember(
   return company?.members.find((m) => m.id === memberId);
 }
 
+export interface ApplicationInput {
+  name: string;
+  email: string;
+  phone?: string;
+  gear?: string;
+  experience?: string;
+  sampleUrl?: string;
+  photographerSlug?: string;
+}
+
+/** A photographer applies to a company's bench — creates a PENDING member. */
+export async function applyToCompany(
+  slug: string,
+  input: ApplicationInput,
+): Promise<{ ok: boolean; member?: Member; error?: string }> {
+  const company = await getCompany(slug);
+  if (!company) return { ok: false, error: "Company not found" };
+  const email = input.email.trim().toLowerCase();
+  const existing = company.members.find((m) => m.email.toLowerCase() === email);
+  if (existing) {
+    return {
+      ok: false,
+      error:
+        existing.status === "pending"
+          ? "You've already applied — they're reviewing it."
+          : "You're already on this bench.",
+    };
+  }
+  const member: Member = {
+    id: `mem-${randomUUID().slice(0, 6)}`,
+    name: input.name,
+    email,
+    phone: input.phone,
+    status: "pending",
+    avatar: `https://i.pravatar.cc/120?u=${encodeURIComponent(email)}`,
+    photographerSlug: input.photographerSlug,
+    gear: input.gear,
+    experience: input.experience,
+    sampleUrl: input.sampleUrl,
+    appliedAt: Date.now(),
+  };
+  await updateCompany(slug, { members: [...company.members, member] });
+  return { ok: true, member };
+}
+
+/** Company approves a pending applicant → they become active (in the queue). */
+export async function approveMember(
+  slug: string,
+  memberId: string,
+): Promise<Member | undefined> {
+  const company = await getCompany(slug);
+  if (!company) return undefined;
+  const members = company.members.map((m) =>
+    m.id === memberId ? { ...m, status: "active" as const } : m,
+  );
+  await updateCompany(slug, { members });
+  return members.find((m) => m.id === memberId);
+}
+
 // ---- Accounts / sessions ----------------------------------------------------
 
 export async function signUp(input: SignUpInput): Promise<AuthResult> {
@@ -267,6 +326,9 @@ function newCompanyRecord(name: string, slug: string, ownerName: string): Compan
     baseDayRate: 350,
     equipmentPolicy: "either",
     equipmentNotes: "Describe what gear you provide vs. expect shooters to bring.",
+    wantsEquipment: "e.g. Full-frame body + wide lens. Drone a plus.",
+    wantsExperience: "e.g. 1+ year shooting real estate; comfortable with a shot list.",
+    payTerms: "e.g. $150–$250 per listing, paid weekly by direct deposit.",
     perks: ["Add the perks that make shooters want to join your bench."],
     offerings: [
       {

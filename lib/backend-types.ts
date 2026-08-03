@@ -35,6 +35,9 @@ export interface CompanyPatch {
   baseDayRate?: number;
   equipmentPolicy?: Company["equipmentPolicy"];
   equipmentNotes?: string;
+  wantsEquipment?: string;
+  wantsExperience?: string;
+  payTerms?: string;
   markets?: string[];
   specialties?: Company["specialties"];
   offerings?: Offering[];

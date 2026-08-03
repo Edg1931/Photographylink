@@ -34,9 +34,11 @@ export interface Photographer {
   dayRate: number; // advertised rate the photographer will work for
   halfDayRate: number;
   availableNow: boolean;
+  experienceYears: number;
   ownsGear: string[];
   networks: string[]; // company slugs this photographer shoots for
-  portfolio: { src: string; label: string }[];
+  // Portfolio items, optionally tagged by field (Real Estate, Weddings, …).
+  portfolio: { src: string; label: string; field?: Specialty }[];
 }
 
 export interface QueueSlot {
@@ -59,9 +61,15 @@ export interface Member {
   email: string;
   phone?: string;
   rate?: number;
-  status: "active" | "invited";
+  // pending = applied, awaiting company approval; active = in the queue.
+  status: "pending" | "active" | "invited";
   avatar?: string;
   photographerSlug?: string;
+  // Info an applicant submits so the company can vet them before approving.
+  gear?: string;
+  experience?: string;
+  sampleUrl?: string;
+  appliedAt?: number;
 }
 
 export interface Company {
@@ -81,6 +89,11 @@ export interface Company {
   baseDayRate: number;
   equipmentPolicy: EquipmentPolicy;
   equipmentNotes: string;
+  // What the company expects of photographers who join their bench.
+  wantsEquipment: string;
+  wantsExperience: string;
+  // Clear, plain-language pay terms so a photographer knows how they get paid.
+  payTerms: string;
   perks: string[];
   offerings: Offering[]; // productized services shown on the micro-site
   bench: QueueSlot[]; // the "stable" of trained photographers (seed/showcase)
@@ -143,13 +156,14 @@ export const photographers: Photographer[] = [
     dayRate: 425,
     halfDayRate: 250,
     availableNow: true,
+    experienceYears: 10,
     ownsGear: ["Sony A7R V", "16-35 GM", "Godox strobes", "DJI Mavic 3"],
     networks: ["lumen-estates", "summit-media"],
     portfolio: [
-      { src: img("photo-1600607687939-ce8a6c25118c"), label: "Hillside living room" },
-      { src: img("photo-1600566753086-00f18fb6b3ea"), label: "Kitchen, natural light" },
-      { src: img("photo-1600585154526-990dced4db0d"), label: "Twilight exterior" },
-      { src: img("photo-1600047509807-ba8f99d2cdde"), label: "Primary suite" },
+      { src: img("photo-1600607687939-ce8a6c25118c"), label: "Hillside living room", field: "Real Estate" },
+      { src: img("photo-1600566753086-00f18fb6b3ea"), label: "Kitchen, natural light", field: "Interiors" },
+      { src: img("photo-1600585154526-990dced4db0d"), label: "Twilight exterior", field: "Twilight" },
+      { src: img("photo-1600047509807-ba8f99d2cdde"), label: "Primary suite", field: "Interiors" },
     ],
   },
   {
@@ -170,6 +184,7 @@ export const photographers: Photographer[] = [
     dayRate: 500,
     halfDayRate: 300,
     availableNow: true,
+    experienceYears: 8,
     ownsGear: ["Canon R5", "DJI Air 3", "Tilt-shift 24mm", "Gimbal"],
     networks: ["lumen-estates"],
     portfolio: [
@@ -197,6 +212,7 @@ export const photographers: Photographer[] = [
     dayRate: 380,
     halfDayRate: 220,
     availableNow: false,
+    experienceYears: 7,
     ownsGear: ["Matterport Pro3", "Sony A7 IV", "14mm", "Aputure lights"],
     networks: ["summit-media"],
     portfolio: [
@@ -224,6 +240,7 @@ export const photographers: Photographer[] = [
     dayRate: 650,
     halfDayRate: 400,
     availableNow: true,
+    experienceYears: 9,
     ownsGear: ["Sony FX3", "Ronin gimbal", "DJI Mavic 3 Cine", "Wireless audio"],
     networks: ["summit-media", "lumen-estates"],
     portfolio: [
@@ -251,6 +268,7 @@ export const photographers: Photographer[] = [
     dayRate: 350,
     halfDayRate: 200,
     availableNow: true,
+    experienceYears: 6,
     ownsGear: ["Nikon Z6 II", "14-30 f/4", "Speedlights", "Tripod rig"],
     networks: ["lumen-estates"],
     portfolio: [
@@ -278,6 +296,7 @@ export const photographers: Photographer[] = [
     dayRate: 700,
     halfDayRate: 425,
     availableNow: false,
+    experienceYears: 12,
     ownsGear: ["Sony A7R V", "Tilt-shift 17/24", "Profoto B10", "Ladder kit"],
     networks: ["summit-media"],
     portfolio: [
@@ -313,6 +332,12 @@ export const companies: Company[] = [
     equipmentPolicy: "either",
     equipmentNotes:
       "We provide strobes, tripods, and a loaner A7 IV kit if you need it. Prefer you bring your own body + wide lens; we'll cover drone rental for aerial jobs.",
+    wantsEquipment:
+      "A full-frame mirrorless body (Sony/Canon/Nikon) and a wide lens (16-24mm equivalent). Drone a plus but not required.",
+    wantsExperience:
+      "At least 1 year shooting real estate, comfortable with a shot list and 12-hour flambient turnaround. Portfolio of interiors required.",
+    payTerms:
+      "Flat $150–$275 per listing depending on size and add-ons. Paid weekly by direct deposit every Friday. We handle client billing — you just shoot and deliver.",
     perks: [
       "Guaranteed 3+ shoots/week for trained shooters",
       "Paid weekly, every Friday",
@@ -385,6 +410,12 @@ export const companies: Company[] = [
     equipmentPolicy: "byo",
     equipmentNotes:
       "Bring your own kit — we're looking for shooters who already own pro bodies, tilt-shift glass, and (for video) a gimbal + drone. We provide lighting on set for twilight work.",
+    wantsEquipment:
+      "Pro full-frame body, tilt-shift lens (17/24mm), and pro lighting. Video shooters need a gimbal and a cinema-capable drone.",
+    wantsExperience:
+      "3+ years in architectural or luxury real estate, or a strong film reel. We hire for taste — show us your best 10 frames.",
+    payTerms:
+      "$550–$900 per shoot (stills) and $900+ for listing films. Paid per project via direct deposit within 7 days of delivery. 1099 contractor.",
     perks: [
       "Premium day rates ($600+)",
       "Luxury & new-construction portfolio",

@@ -28,10 +28,20 @@ export default function PhotographerPage({
 
   const stats = [
     { label: "Rating", value: p.rating.toFixed(2), sub: `${p.reviewCount} reviews` },
+    { label: "Experience", value: `${p.experienceYears} yrs`, sub: "in the field" },
     { label: "Jobs done", value: p.jobsCompleted.toLocaleString(), sub: "all-time" },
     { label: "On-time", value: `${p.onTimeRate}%`, sub: "arrival rate" },
-    { label: "Responds", value: `~${p.responseHours}h`, sub: "avg reply" },
   ];
+
+  // Group portfolio by field so companies can judge work per specialty.
+  const grouped = p.portfolio.reduce<Record<string, typeof p.portfolio>>(
+    (acc, shot) => {
+      const key = shot.field ?? "Selected work";
+      (acc[key] = acc[key] ?? []).push(shot);
+      return acc;
+    },
+    {},
+  );
 
   return (
     <>
@@ -70,7 +80,8 @@ export default function PhotographerPage({
                   )}
                 </div>
                 <p className="mt-1 text-bone/60">
-                  {p.location} · works within {p.radiusMiles} mi
+                  {p.location} · works within {p.radiusMiles} mi ·{" "}
+                  {p.experienceYears} yrs experience
                 </p>
                 <div className="mt-2">
                   <Stars rating={p.rating} />
@@ -124,28 +135,39 @@ export default function PhotographerPage({
         <div className="mt-10 grid gap-10 lg:grid-cols-[1.6fr_1fr]">
           {/* Portfolio */}
           <div>
-            <h2 className="font-display text-2xl font-semibold">Portfolio</h2>
-            <div className="mt-5 grid grid-cols-2 gap-3">
-              {p.portfolio.map((shot, i) => (
-                <figure
-                  key={i}
-                  className={`group relative overflow-hidden rounded-2xl border border-ink-700 ${
-                    i === 0 ? "col-span-2 aspect-[16/10]" : "aspect-[4/3]"
-                  }`}
-                >
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img
-                    src={shot.src}
-                    alt={shot.label}
-                    loading="lazy"
-                    className="h-full w-full object-cover transition-transform duration-700 group-hover:scale-105"
-                  />
-                  <figcaption className="absolute inset-x-0 bottom-0 translate-y-2 bg-gradient-to-t from-ink-950/90 to-transparent p-3 text-sm text-bone/90 opacity-0 transition-all group-hover:translate-y-0 group-hover:opacity-100">
-                    {shot.label}
-                  </figcaption>
-                </figure>
-              ))}
+            <div className="flex items-center justify-between">
+              <h2 className="font-display text-2xl font-semibold">Portfolio</h2>
+              <span className="text-xs text-bone/45">Grouped by field</span>
             </div>
+            {Object.entries(grouped).map(([field, shots]) => (
+              <div key={field} className="mt-5">
+                <h3 className="mb-3 inline-flex items-center gap-2 text-sm font-semibold text-amber-soft">
+                  {field}
+                  <span className="rounded-full bg-ink-800 px-2 py-0.5 text-[11px] text-bone/50">
+                    {shots.length}
+                  </span>
+                </h3>
+                <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+                  {shots.map((shot, i) => (
+                    <figure
+                      key={i}
+                      className="group relative aspect-[4/3] overflow-hidden rounded-2xl border border-ink-700"
+                    >
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img
+                        src={shot.src}
+                        alt={shot.label}
+                        loading="lazy"
+                        className="h-full w-full object-cover transition-transform duration-700 group-hover:scale-105"
+                      />
+                      <figcaption className="absolute inset-x-0 bottom-0 translate-y-2 bg-gradient-to-t from-ink-950/90 to-transparent p-3 text-sm text-bone/90 opacity-0 transition-all group-hover:translate-y-0 group-hover:opacity-100">
+                        {shot.label}
+                      </figcaption>
+                    </figure>
+                  ))}
+                </div>
+              </div>
+            ))}
 
             {/* About */}
             <h2 className="mt-10 font-display text-2xl font-semibold">About</h2>

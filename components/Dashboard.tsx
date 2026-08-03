@@ -191,7 +191,7 @@ export function Dashboard({
             />
             <PostJobForm
               companySlug={co.slug}
-              members={co.members}
+              members={co.members.filter((m) => m.status === "active")}
               onPosted={refreshJobs}
             />
           </div>
@@ -253,6 +253,22 @@ function Overview({
         </h2>
         <p className="mt-1 text-bone/60">Here&apos;s what&apos;s happening with {co.name}.</p>
       </div>
+
+      {co.members.some((m) => m.status === "pending") && (
+        <button
+          onClick={() => go("bench")}
+          className="flex w-full items-center justify-between gap-3 rounded-2xl border border-amber-brand/30 bg-amber-brand/10 p-4 text-left"
+        >
+          <span className="text-sm text-bone">
+            <strong className="text-amber-soft">
+              {co.members.filter((m) => m.status === "pending").length} photographer
+              {co.members.filter((m) => m.status === "pending").length > 1 ? "s" : ""}
+            </strong>{" "}
+            applied and are waiting for your approval.
+          </span>
+          <span className="shrink-0 text-sm font-medium text-amber-soft">Review →</span>
+        </button>
+      )}
 
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
         {stats.map((s) => (
@@ -441,6 +457,9 @@ function BenchManager({
   const [busy, setBusy] = useState(false);
   const [copied, setCopied] = useState<string | null>(null);
 
+  const pending = co.members.filter((m) => m.status === "pending");
+  const roster = co.members.filter((m) => m.status !== "pending");
+
   const add = async () => {
     setBusy(true);
     try {
@@ -469,6 +488,18 @@ function BenchManager({
     onChange({ ...co, members: co.members.filter((m) => m.id !== id) });
   };
 
+  const approve = async (id: string) => {
+    await fetch("/api/company/members", {
+      method: "PATCH",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ id, action: "approve" }),
+    });
+    onChange({
+      ...co,
+      members: co.members.map((m) => (m.id === id ? { ...m, status: "active" } : m)),
+    });
+  };
+
   const copyLink = (m: Member) => {
     const url = `${window.location.origin}/bench/${co.slug}/${m.id}`;
     navigator.clipboard?.writeText(url);
@@ -478,55 +509,90 @@ function BenchManager({
 
   return (
     <div className="grid gap-8 lg:grid-cols-[1.3fr_1fr]">
-      <div>
-        <SectionHead
-          title="My bench"
-          sub="The photographers who shoot for you. Each gets a personal link — send it to them, and they can claim broadcasts with one tap (no login needed)."
-        />
-        {co.members.length === 0 ? (
-          <div className="rounded-2xl border border-dashed border-ink-700 p-8 text-center text-bone/45">
-            No photographers yet. Add your first one on the right.
-          </div>
-        ) : (
-          <div className="space-y-2">
-            {co.members.map((m) => (
-              <div key={m.id} className="flex items-center justify-between gap-3 rounded-2xl border border-ink-700 bg-ink-900 p-3">
-                <div className="flex min-w-0 items-center gap-3">
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img src={m.avatar} alt="" className="h-10 w-10 rounded-full object-cover" />
-                  <div className="min-w-0">
-                    <p className="truncate text-sm font-semibold text-bone">{m.name}</p>
-                    <p className="truncate text-xs text-bone/50">
-                      {m.email}
-                      {m.rate ? ` · $${m.rate}/day` : ""}
-                    </p>
+      <div className="space-y-8">
+        {/* Applicants awaiting approval */}
+        {pending.length > 0 && (
+          <div>
+            <SectionHead
+              title={`Applicants (${pending.length})`}
+              sub="Photographers who applied to your bench. Review their work, then approve to add them to your queue."
+            />
+            <div className="space-y-3">
+              {pending.map((m) => (
+                <div key={m.id} className="rounded-2xl border border-amber-brand/25 bg-amber-brand/5 p-4">
+                  <div className="flex items-start gap-3">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img src={m.avatar} alt="" className="h-11 w-11 rounded-full object-cover" />
+                    <div className="min-w-0 flex-1">
+                      <p className="text-sm font-semibold text-bone">{m.name}</p>
+                      <p className="text-xs text-bone/50">
+                        {m.email}
+                        {m.phone ? ` · ${m.phone}` : ""}
+                      </p>
+                      {m.gear && <p className="mt-1 text-xs text-bone/70"><span className="text-bone/40">Gear:</span> {m.gear}</p>}
+                      {m.experience && <p className="mt-0.5 text-xs text-bone/70"><span className="text-bone/40">Experience:</span> {m.experience}</p>}
+                    </div>
+                  </div>
+                  {m.sampleUrl && (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img src={m.sampleUrl} alt="Work sample" className="mt-3 h-40 w-full rounded-lg object-cover" />
+                  )}
+                  <div className="mt-3 flex gap-2">
+                    <Button className="flex-1" onClick={() => approve(m.id)}>Approve → add to bench</Button>
+                    <button onClick={() => remove(m.id)} className="rounded-full px-4 py-2 text-sm text-bone/55 ring-1 ring-inset ring-ink-600 hover:text-rose-200 hover:ring-rose-500/40">
+                      Decline
+                    </button>
                   </div>
                 </div>
-                <div className="flex shrink-0 items-center gap-2">
-                  {m.status === "invited" && <Badge tone="blue">Invited</Badge>}
-                  <button
-                    onClick={() => copyLink(m)}
-                    className="rounded-full bg-ink-800 px-3 py-1.5 text-xs font-medium text-bone/70 hover:text-bone"
-                  >
-                    {copied === m.id ? "Copied ✓" : "Copy claim link"}
-                  </button>
-                  <button
-                    onClick={() => remove(m.id)}
-                    className="rounded-full px-2 py-1.5 text-xs text-bone/40 hover:text-rose-300"
-                    aria-label={`Remove ${m.name}`}
-                  >
-                    ✕
-                  </button>
-                </div>
-              </div>
-            ))}
+              ))}
+            </div>
           </div>
         )}
+
+        {/* Active roster */}
+        <div>
+          <SectionHead
+            title="My bench"
+            sub="Approved photographers. Each has a personal link — send it to them and they can claim broadcasts with one tap (no login needed)."
+          />
+          {roster.length === 0 ? (
+            <div className="rounded-2xl border border-dashed border-ink-700 p-8 text-center text-bone/45">
+              No photographers yet. Add one on the right, or approve an applicant.
+            </div>
+          ) : (
+            <div className="space-y-2">
+              {roster.map((m) => (
+                <div key={m.id} className="flex items-center justify-between gap-3 rounded-2xl border border-ink-700 bg-ink-900 p-3">
+                  <div className="flex min-w-0 items-center gap-3">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img src={m.avatar} alt="" className="h-10 w-10 rounded-full object-cover" />
+                    <div className="min-w-0">
+                      <p className="truncate text-sm font-semibold text-bone">{m.name}</p>
+                      <p className="truncate text-xs text-bone/50">
+                        {m.email}
+                        {m.rate ? ` · $${m.rate}/day` : ""}
+                      </p>
+                    </div>
+                  </div>
+                  <div className="flex shrink-0 items-center gap-2">
+                    {m.status === "invited" && <Badge tone="blue">Invited</Badge>}
+                    <button onClick={() => copyLink(m)} className="rounded-full bg-ink-800 px-3 py-1.5 text-xs font-medium text-bone/70 hover:text-bone">
+                      {copied === m.id ? "Copied ✓" : "Copy claim link"}
+                    </button>
+                    <button onClick={() => remove(m.id)} className="rounded-full px-2 py-1.5 text-xs text-bone/40 hover:text-rose-300" aria-label={`Remove ${m.name}`}>
+                      ✕
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
       </div>
 
-      <div className="rounded-2xl border border-ink-700 bg-ink-900 p-5">
+      <div className="rounded-2xl border border-ink-700 bg-ink-900 p-5 lg:sticky lg:top-20 lg:self-start">
         <h3 className="mb-3 text-xs font-semibold uppercase tracking-widest text-bone/40">
-          Add a photographer
+          Add a photographer directly
         </h3>
         <div className="space-y-3">
           <Labeled label="Name">
@@ -546,6 +612,10 @@ function BenchManager({
           <Button className="w-full" onClick={add} disabled={busy || !form.name || !form.email}>
             {busy ? "Adding…" : "Add to bench"}
           </Button>
+          <p className="text-xs text-bone/40">
+            Adding someone directly skips approval. To have photographers apply
+            themselves, share your public page.
+          </p>
         </div>
       </div>
     </div>
@@ -609,6 +679,17 @@ function SiteEditor({
         <Panel title="Perks (one per line)">
           <textarea className="input resize-none" rows={4} value={co.perks.join("\n")} onChange={(e) => set("perks", e.target.value.split("\n").map((p) => p.trim()).filter(Boolean))} />
         </Panel>
+        <Panel title="Who you're looking for & how they get paid">
+          <Labeled label="Equipment you expect photographers to have">
+            <textarea className="input resize-none" rows={2} value={co.wantsEquipment} onChange={(e) => set("wantsEquipment", e.target.value)} />
+          </Labeled>
+          <Labeled label="Experience you're looking for">
+            <textarea className="input resize-none" rows={2} value={co.wantsExperience} onChange={(e) => set("wantsExperience", e.target.value)} />
+          </Labeled>
+          <Labeled label="How photographers get paid (be clear!)">
+            <textarea className="input resize-none" rows={3} value={co.payTerms} onChange={(e) => set("payTerms", e.target.value)} />
+          </Labeled>
+        </Panel>
         <div className="flex items-center gap-3">
           <Button
             onClick={() =>
@@ -616,6 +697,8 @@ function SiteEditor({
                 tagline: co.tagline, about: co.about, location: co.location,
                 baseDayRate: co.baseDayRate, markets: co.markets,
                 equipmentPolicy: co.equipmentPolicy, equipmentNotes: co.equipmentNotes,
+                wantsEquipment: co.wantsEquipment, wantsExperience: co.wantsExperience,
+                payTerms: co.payTerms,
                 perks: co.perks, accent: co.accent, specialties: co.specialties,
               })
             }

@@ -6,7 +6,7 @@ import { listJobs } from "@/lib/store";
 import { Container, Badge, Button, Stars, Avatar } from "@/components/ui";
 import { JobCard } from "@/components/JobCard";
 import { InquireButton } from "@/components/InquireButton";
-import { ProtoAction } from "@/components/ProtoAction";
+import { ApplyButton } from "@/components/ApplyButton";
 import { brand } from "@/lib/brand";
 
 export const dynamic = "force-dynamic";
@@ -78,9 +78,9 @@ export default async function CompanyPage({
             </div>
             <div className="flex gap-2 pb-1">
               <InquireButton companySlug={c.slug} companyName={c.name} />
-              <ProtoAction
-                label="Apply to shoot"
-                confirmed="Application sent"
+              <ApplyButton
+                companySlug={c.slug}
+                companyName={c.name}
                 variant="outline"
               />
             </div>
@@ -151,6 +151,19 @@ export default async function CompanyPage({
                 </div>
               </>
             )}
+
+            {/* Working with us — requirements + pay terms */}
+            <h2 className="mt-10 font-display text-2xl font-semibold">
+              Working with us
+            </h2>
+            <div className="mt-5 grid gap-3 sm:grid-cols-3">
+              <WorkPanel accent={accent} label="How you get paid" body={c.payTerms} highlight />
+              <WorkPanel accent={accent} label="Equipment we expect" body={c.wantsEquipment} />
+              <WorkPanel accent={accent} label="Experience we want" body={c.wantsExperience} />
+            </div>
+            <div className="mt-4">
+              <ApplyButton companySlug={c.slug} companyName={c.name} />
+            </div>
 
             {/* Showcase gallery */}
             <h2 className="mt-10 font-display text-2xl font-semibold">
@@ -281,5 +294,35 @@ export default async function CompanyPage({
         </div>
       </Container>
     </>
+  );
+}
+
+function WorkPanel({
+  accent,
+  label,
+  body,
+  highlight,
+}: {
+  accent: string;
+  label: string;
+  body: string;
+  highlight?: boolean;
+}) {
+  return (
+    <div
+      className="rounded-2xl border p-5"
+      style={
+        highlight
+          ? { borderColor: `${accent}40`, background: `${accent}0d` }
+          : { borderColor: "#1f1f23", background: "#101012" }
+      }
+    >
+      <h3 className="text-xs font-semibold uppercase tracking-widest text-bone/50">
+        {label}
+      </h3>
+      <p className="mt-2 text-sm leading-relaxed text-bone/75">
+        {body || "—"}
+      </p>
+    </div>
   );
 }

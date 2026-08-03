@@ -28,6 +28,12 @@ export async function POST(
       { status: 404 },
     );
   }
+  if (member.status !== "active") {
+    return NextResponse.json(
+      { ok: false, error: "not_approved" },
+      { status: 403 },
+    );
+  }
   const result = await claimJob(body.jobId, member.id, member.name);
   if (result.ok) return NextResponse.json({ ok: true, job: result.job });
   const status = result.reason === "not_found" ? 404 : 409;
