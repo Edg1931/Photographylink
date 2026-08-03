@@ -11,7 +11,13 @@
 // -----------------------------------------------------------------------------
 
 import { createHash, randomUUID } from "crypto";
-import { companies as seedCompanies, Company, Member } from "./data";
+import {
+  companies as seedCompanies,
+  photographers as seedPhotographers,
+  Company,
+  Member,
+  Photographer,
+} from "./data";
 import { getSupabase } from "./supabase";
 import * as repo from "./supabase-repo";
 import {
@@ -25,16 +31,18 @@ import {
   Inquiry,
   Role,
   CompanyPatch,
+  PhotographerPatch,
   NewInquiry,
   SignUpInput,
   AuthResult,
 } from "./backend-types";
 
-export type { Account, Inquiry, Role, CompanyPatch, NewInquiry, SignUpInput, AuthResult };
+export type { Account, Inquiry, Role, CompanyPatch, PhotographerPatch, NewInquiry, SignUpInput, AuthResult };
 
 // ---- In-memory fallback state ----------------------------------------------
 
 let companiesState: Company[] = clone(seedCompanies);
+let photographersState: Photographer[] = clone(seedPhotographers);
 const accounts = new Map<string, Account>();
 const emailIndex = new Map<string, string>();
 const sessions = new Map<string, string>();
@@ -81,6 +89,35 @@ export async function updateCompany(
   if (!c) return undefined;
   Object.assign(c, patch);
   return clone(c);
+}
+
+// ---- Photographers ----------------------------------------------------------
+
+export async function listPhotographers(): Promise<Photographer[]> {
+  const sb = getSupabase();
+  if (sb) return repo.listPhotographers(sb);
+  return clone(photographersState);
+}
+
+export async function getPhotographerRecord(
+  slug: string,
+): Promise<Photographer | undefined> {
+  const sb = getSupabase();
+  if (sb) return repo.getPhotographer(sb, slug);
+  const p = photographersState.find((x) => x.slug === slug);
+  return p ? clone(p) : undefined;
+}
+
+export async function updatePhotographer(
+  slug: string,
+  patch: PhotographerPatch,
+): Promise<Photographer | undefined> {
+  const sb = getSupabase();
+  if (sb) return repo.updatePhotographer(sb, slug, patch);
+  const p = photographersState.find((x) => x.slug === slug);
+  if (!p) return undefined;
+  Object.assign(p, patch);
+  return clone(p);
 }
 
 // ---- Bench members ----------------------------------------------------------
@@ -195,7 +232,7 @@ export async function signUp(input: SignUpInput): Promise<AuthResult> {
     return { ok: false, error: "That email is reserved — just log in with it." };
   }
   const sb = getSupabase();
-  if (sb) return repo.signUp(sb, input, newCompanyRecord, slugBase);
+  if (sb) return repo.signUp(sb, input, newCompanyRecord, newPhotographerRecord, slugBase);
 
   const email = input.email.trim().toLowerCase();
   if (!email || !input.password) return { ok: false, error: "Email and password required" };
@@ -218,6 +255,16 @@ export async function signUp(input: SignUpInput): Promise<AuthResult> {
     while (companiesState.some((c) => c.slug === slug)) slug = `${base}-${n++}`;
     companiesState = [newCompanyRecord(name, slug, account.displayName), ...companiesState];
     account.companySlug = slug;
+  } else if (input.role === "photographer") {
+    const base = slugBase(account.displayName) || "photographer";
+    let slug = base;
+    let n = 2;
+    while (photographersState.some((p) => p.slug === slug)) slug = `${base}-${n++}`;
+    photographersState = [
+      newPhotographerRecord(account.displayName, slug),
+      ...photographersState,
+    ];
+    account.photographerSlug = slug;
   }
   accounts.set(id, account);
   emailIndex.set(email, id);
@@ -288,6 +335,33 @@ export async function listInquiries(companySlug?: string): Promise<Inquiry[]> {
 }
 
 // ---- Helpers ----------------------------------------------------------------
+
+function newPhotographerRecord(name: string, slug: string): Photographer {
+  return {
+    slug,
+    name,
+    avatar: `https://i.pravatar.cc/240?u=${encodeURIComponent(slug)}`,
+    cover:
+      "https://images.unsplash.com/photo-1600566753086-00f18fb6b3ea?auto=format&fit=crop&w=1600&q=80",
+    location: "Your area",
+    radiusMiles: 30,
+    headline: "New here — add a headline that sells you in one line.",
+    bio: "Tell companies about your style, your turnaround, and what you love shooting.",
+    specialties: ["Real Estate"],
+    rating: 5,
+    reviewCount: 0,
+    jobsCompleted: 0,
+    onTimeRate: 100,
+    responseHours: 2,
+    dayRate: 350,
+    halfDayRate: 200,
+    availableNow: true,
+    experienceYears: 0,
+    ownsGear: [],
+    networks: [],
+    portfolio: [],
+  };
+}
 
 function newCompanyRecord(name: string, slug: string, ownerName: string): Company {
   void ownerName;

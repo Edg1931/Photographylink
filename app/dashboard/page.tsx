@@ -3,8 +3,9 @@ import Link from "next/link";
 import { Container, Button } from "@/components/ui";
 import { Dashboard } from "@/components/Dashboard";
 import { currentAccount } from "@/lib/session";
-import { getCompany, listInquiries } from "@/lib/backend";
+import { getCompany, listInquiries, getPhotographerRecord } from "@/lib/backend";
 import { listJobs } from "@/lib/store";
+import { PhotographerDashboard } from "@/components/PhotographerDashboard";
 import { brand } from "@/lib/brand";
 
 export const dynamic = "force-dynamic";
@@ -35,7 +36,22 @@ export default async function DashboardPage() {
     );
   }
 
-  // Photographer accounts (lighter — full profile editor is a next step).
+  // Photographer accounts — self-serve profile editor.
+  if (account.role === "photographer" && account.photographerSlug) {
+    const photographer = await getPhotographerRecord(account.photographerSlug);
+    if (photographer) {
+      return (
+        <Container className="py-10 lg:py-14">
+          <PhotographerDashboard
+            account={{ displayName: account.displayName, email: account.email }}
+            photographer={photographer}
+          />
+        </Container>
+      );
+    }
+  }
+
+  // Fallback (older accounts without a linked profile).
   return (
     <Container className="py-16">
       <div className="mx-auto max-w-lg rounded-3xl border border-ink-700 bg-ink-900 p-8 text-center">
@@ -43,8 +59,7 @@ export default async function DashboardPage() {
           Welcome, {account.displayName}
         </h1>
         <p className="mt-2 text-bone/60">
-          Your photographer profile is where you show your work and set your
-          rates. Browse open jobs and claim the ones that fit your schedule.
+          Browse open jobs and claim the ones that fit your schedule.
         </p>
         <div className="mt-6 flex flex-col gap-2 sm:flex-row sm:justify-center">
           <Button href="/jobs">Find work in the queue →</Button>
@@ -52,11 +67,9 @@ export default async function DashboardPage() {
             See photographer profiles
           </Button>
         </div>
-        <form action="/api/auth/logout" method="post" className="mt-6">
-          <Link href="/" className="text-sm text-bone/45 hover:text-bone">
-            Back to home
-          </Link>
-        </form>
+        <Link href="/" className="mt-6 block text-sm text-bone/45 hover:text-bone">
+          Back to home
+        </Link>
       </div>
     </Container>
   );

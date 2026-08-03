@@ -6,15 +6,16 @@ import {
   jobs as seedJobs,
   Company,
   Job,
+  Photographer,
 } from "./data";
 import type {
   Account,
   Inquiry,
   CompanyPatch,
+  PhotographerPatch,
   NewInquiry,
   SignUpInput,
   AuthResult,
-  NewJobInput,
 } from "./backend-types";
 
 // -----------------------------------------------------------------------------
@@ -109,6 +110,74 @@ function patchRow(p: CompanyPatch) {
   return row;
 }
 
+function toPhotographer(r: any): Photographer {
+  return {
+    slug: r.slug,
+    name: r.name,
+    avatar: r.avatar,
+    cover: r.cover,
+    location: r.location,
+    radiusMiles: r.radius_miles,
+    headline: r.headline,
+    bio: r.bio,
+    specialties: r.specialties ?? [],
+    rating: Number(r.rating),
+    reviewCount: r.review_count,
+    jobsCompleted: r.jobs_completed,
+    onTimeRate: r.on_time_rate,
+    responseHours: r.response_hours,
+    dayRate: r.day_rate,
+    halfDayRate: r.half_day_rate,
+    availableNow: r.available_now,
+    experienceYears: r.experience_years ?? 0,
+    ownsGear: r.owns_gear ?? [],
+    networks: r.networks ?? [],
+    portfolio: r.portfolio ?? [],
+  };
+}
+
+function photographerRow(p: Photographer) {
+  return {
+    slug: p.slug,
+    name: p.name,
+    avatar: p.avatar,
+    cover: p.cover,
+    location: p.location,
+    radius_miles: p.radiusMiles,
+    headline: p.headline,
+    bio: p.bio,
+    specialties: p.specialties,
+    rating: p.rating,
+    review_count: p.reviewCount,
+    jobs_completed: p.jobsCompleted,
+    on_time_rate: p.onTimeRate,
+    response_hours: p.responseHours,
+    day_rate: p.dayRate,
+    half_day_rate: p.halfDayRate,
+    available_now: p.availableNow,
+    experience_years: p.experienceYears,
+    owns_gear: p.ownsGear,
+    networks: p.networks,
+    portfolio: p.portfolio,
+  };
+}
+
+function photographerPatchRow(p: PhotographerPatch) {
+  const row: Record<string, unknown> = {};
+  if (p.headline !== undefined) row.headline = p.headline;
+  if (p.bio !== undefined) row.bio = p.bio;
+  if (p.location !== undefined) row.location = p.location;
+  if (p.radiusMiles !== undefined) row.radius_miles = p.radiusMiles;
+  if (p.dayRate !== undefined) row.day_rate = p.dayRate;
+  if (p.halfDayRate !== undefined) row.half_day_rate = p.halfDayRate;
+  if (p.availableNow !== undefined) row.available_now = p.availableNow;
+  if (p.experienceYears !== undefined) row.experience_years = p.experienceYears;
+  if (p.ownsGear !== undefined) row.owns_gear = p.ownsGear;
+  if (p.specialties !== undefined) row.specialties = p.specialties;
+  if (p.portfolio !== undefined) row.portfolio = p.portfolio;
+  return row;
+}
+
 function toJob(r: any): Job {
   return {
     id: r.id,
@@ -176,6 +245,7 @@ function toAccount(r: any): Account {
     role: r.role,
     displayName: r.display_name,
     companySlug: r.company_slug ?? undefined,
+    photographerSlug: r.photographer_slug ?? undefined,
     createdAt: new Date(r.created_at).getTime(),
   };
 }
@@ -281,12 +351,56 @@ export async function slugTaken(
   return Boolean(data);
 }
 
+// ---- Photographers ----------------------------------------------------------
+
+export async function listPhotographers(sb: SupabaseClient): Promise<Photographer[]> {
+  await ensureSeeded(sb);
+  const { data } = await sb
+    .from("photographers")
+    .select("*")
+    .order("created_at", { ascending: false });
+  return (data ?? []).map(toPhotographer);
+}
+
+export async function getPhotographer(
+  sb: SupabaseClient,
+  slug: string,
+): Promise<Photographer | undefined> {
+  await ensureSeeded(sb);
+  const { data } = await sb.from("photographers").select("*").eq("slug", slug).maybeSingle();
+  return data ? toPhotographer(data) : undefined;
+}
+
+export async function updatePhotographer(
+  sb: SupabaseClient,
+  slug: string,
+  patch: PhotographerPatch,
+): Promise<Photographer | undefined> {
+  const { data } = await sb
+    .from("photographers")
+    .update(photographerPatchRow(patch))
+    .eq("slug", slug)
+    .select("*")
+    .maybeSingle();
+  return data ? toPhotographer(data) : undefined;
+}
+
+async function insertPhotographer(sb: SupabaseClient, p: Photographer): Promise<void> {
+  await sb.from("photographers").insert(photographerRow(p));
+}
+
+async function photographerSlugTaken(sb: SupabaseClient, slug: string): Promise<boolean> {
+  const { data } = await sb.from("photographers").select("slug").eq("slug", slug).maybeSingle();
+  return Boolean(data);
+}
+
 // ---- Accounts / sessions ----------------------------------------------------
 
 export async function signUp(
   sb: SupabaseClient,
   input: SignUpInput,
   buildCompany: (name: string, slug: string, owner: string) => Company,
+  buildPhotographer: (name: string, slug: string) => Photographer,
   slugify: (name: string) => string,
 ): Promise<AuthResult> {
   await ensureSeeded(sb);
@@ -317,6 +431,14 @@ export async function signUp(
     await insertCompany(sb, company, acct.id);
     await sb.from("accounts").update({ company_slug: slug }).eq("id", acct.id);
     acct.company_slug = slug;
+  } else if (input.role === "photographer") {
+    const base = slugify(displayName) || "photographer";
+    let slug = base;
+    let n = 2;
+    while (await photographerSlugTaken(sb, slug)) slug = `${base}-${n++}`;
+    await insertPhotographer(sb, buildPhotographer(displayName, slug));
+    await sb.from("accounts").update({ photographer_slug: slug }).eq("id", acct.id);
+    acct.photographer_slug = slug;
   }
 
   const token = await newSession(sb, acct.id);

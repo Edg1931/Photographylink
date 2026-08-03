@@ -107,10 +107,11 @@ create table if not exists public.accounts (
   id            uuid primary key default gen_random_uuid(),
   email         text unique not null,
   password_hash text not null,
-  role          text not null,
-  display_name  text not null default '',
-  company_slug  text,
-  created_at    timestamptz not null default now()
+  role              text not null,
+  display_name      text not null default '',
+  company_slug      text,
+  photographer_slug text,
+  created_at        timestamptz not null default now()
 );
 
 -- ------------------------------------------------------------------- sessions

@@ -1,13 +1,17 @@
 import { Container, SectionLabel } from "@/components/ui";
-import { photographers, allSpecialties } from "@/lib/data";
+import { allSpecialties } from "@/lib/data";
+import { listPhotographers } from "@/lib/backend";
 import { PhotographerBrowser } from "@/components/PhotographerBrowser";
 import { brand } from "@/lib/brand";
+
+export const dynamic = "force-dynamic";
 
 export const metadata = {
   title: `Find photographers · ${brand.name}`,
 };
 
-export default function PhotographersPage() {
+export default async function PhotographersPage() {
+  const photographers = await listPhotographers();
   return (
     <>
       <section className="border-b border-ink-700/60 bg-ink-900/40 py-14">

@@ -1,29 +1,28 @@
 import { notFound } from "next/navigation";
 import Link from "next/link";
-import {
-  photographers,
-  getPhotographer,
-  getCompany,
-} from "@/lib/data";
+import { getCompany } from "@/lib/data";
+import { getPhotographerRecord } from "@/lib/backend";
 import { Container, Badge, Button, Stars } from "@/components/ui";
 import { ProtoAction } from "@/components/ProtoAction";
 import { brand } from "@/lib/brand";
 
-export function generateStaticParams() {
-  return photographers.map((p) => ({ slug: p.slug }));
-}
+export const dynamic = "force-dynamic";
 
-export function generateMetadata({ params }: { params: { slug: string } }) {
-  const p = getPhotographer(params.slug);
-  return { title: p ? `${p.name} · ${brand.name}` : "Photographer" };
-}
-
-export default function PhotographerPage({
+export async function generateMetadata({
   params,
 }: {
   params: { slug: string };
 }) {
-  const p = getPhotographer(params.slug);
+  const p = await getPhotographerRecord(params.slug);
+  return { title: p ? `${p.name} · ${brand.name}` : "Photographer" };
+}
+
+export default async function PhotographerPage({
+  params,
+}: {
+  params: { slug: string };
+}) {
+  const p = await getPhotographerRecord(params.slug);
   if (!p) notFound();
 
   const stats = [
