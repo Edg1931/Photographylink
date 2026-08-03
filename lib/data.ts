@@ -160,10 +160,14 @@ export const photographers: Photographer[] = [
     ownsGear: ["Sony A7R V", "16-35 GM", "Godox strobes", "DJI Mavic 3"],
     networks: ["lumen-estates", "summit-media"],
     portfolio: [
-      { src: img("photo-1600607687939-ce8a6c25118c"), label: "Hillside living room", field: "Real Estate" },
-      { src: img("photo-1600566753086-00f18fb6b3ea"), label: "Kitchen, natural light", field: "Interiors" },
-      { src: img("photo-1600585154526-990dced4db0d"), label: "Twilight exterior", field: "Twilight" },
-      { src: img("photo-1600047509807-ba8f99d2cdde"), label: "Primary suite", field: "Interiors" },
+      { src: img("photo-1600607687939-ce8a6c25118c", 1100), label: "Hillside living room", field: "Real Estate" },
+      { src: img("photo-1600585152220-90363fe7e115", 1100), label: "Open-plan living", field: "Real Estate" },
+      { src: img("photo-1600585154526-990dced4db0d", 1100), label: "Twilight exterior", field: "Twilight" },
+      { src: img("photo-1600566753086-00f18fb6b3ea", 1100), label: "Kitchen, natural light", field: "Interiors" },
+      { src: img("photo-1600047509807-ba8f99d2cdde", 1100), label: "Primary suite", field: "Interiors" },
+      { src: img("photo-1580587771525-78b9dba3b914", 1100), label: "Twilight aerial", field: "Twilight" },
+      { src: img("photo-1600596542815-ffad4c1539a9", 1100), label: "Styled lifestyle", field: "Real Estate" },
+      { src: img("photo-1600210492486-724fe5c67fb0", 1100), label: "Backyard & pool", field: "Real Estate" },
     ],
   },
   {
