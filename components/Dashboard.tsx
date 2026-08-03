@@ -12,6 +12,7 @@ import {
 } from "@/lib/data";
 import { Button, Badge } from "@/components/ui";
 import { PostJobForm } from "@/components/PostJobForm";
+import { MonthCalendar } from "@/components/MonthCalendar";
 import { clsx } from "@/lib/clsx";
 
 interface Inquiry {
@@ -25,25 +26,46 @@ interface Inquiry {
   read: boolean;
 }
 
-type Tab = "overview" | "schedule" | "bench" | "broadcast" | "leads" | "page";
+interface Notification {
+  id: string;
+  type: "application" | "claim" | "inquiry";
+  text: string;
+  href?: string;
+  at: number;
+  read: boolean;
+}
+
+type Tab =
+  | "overview"
+  | "schedule"
+  | "bench"
+  | "broadcast"
+  | "leads"
+  | "activity"
+  | "page";
 
 export function Dashboard({
   account,
   company,
   inquiries: initialInquiries,
   jobs: initialJobs,
+  notifications: initialNotifications,
 }: {
   account: { displayName: string; email: string };
   company: Company;
   inquiries: Inquiry[];
   jobs: Job[];
+  notifications: Notification[];
 }) {
   const [tab, setTab] = useState<Tab>("overview");
   const [co, setCo] = useState<Company>(company);
   const [inquiries, setInquiries] = useState<Inquiry[]>(initialInquiries);
   const [jobs, setJobs] = useState<Job[]>(initialJobs);
+  const [notifications, setNotifications] = useState<Notification[]>(initialNotifications);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
+
+  const unread = notifications.filter((n) => !n.read).length;
 
   const patch = useCallback(async (body: Partial<Company>) => {
     setSaving(true);
@@ -75,13 +97,25 @@ export function Dashboard({
     setInquiries(data.inquiries);
   }, []);
 
+  const refreshNotifications = useCallback(async () => {
+    const data = await fetch("/api/notifications", { cache: "no-store" }).then((r) => r.json());
+    setNotifications(data.notifications);
+  }, []);
+
+  const openActivity = useCallback(async () => {
+    setTab("activity");
+    await fetch("/api/notifications", { method: "POST" }); // mark read
+    setNotifications((ns) => ns.map((n) => ({ ...n, read: true })));
+  }, []);
+
   useEffect(() => {
     const t = setInterval(() => {
       refreshInquiries();
       refreshJobs();
+      refreshNotifications();
     }, 10000);
     return () => clearInterval(t);
-  }, [refreshInquiries, refreshJobs]);
+  }, [refreshInquiries, refreshJobs, refreshNotifications]);
 
   const logout = async () => {
     await fetch("/api/auth/logout", { method: "POST" });
@@ -103,6 +137,7 @@ export function Dashboard({
     { key: "bench", label: "My bench", badge: co.members.length },
     { key: "broadcast", label: "Broadcast a shoot" },
     { key: "leads", label: "Leads", badge: inquiries.length },
+    { key: "activity", label: "Activity", badge: unread },
     { key: "page", label: "My public page" },
   ];
 
@@ -139,7 +174,7 @@ export function Dashboard({
         {tabs.map((t) => (
           <button
             key={t.key}
-            onClick={() => setTab(t.key)}
+            onClick={() => (t.key === "activity" ? openActivity() : setTab(t.key))}
             className={clsx(
               "flex items-center gap-2 rounded-full px-4 py-2 text-sm font-medium transition-colors",
               tab === t.key
@@ -204,6 +239,9 @@ export function Dashboard({
             />
             <Inquiries inquiries={inquiries} onRefresh={refreshInquiries} />
           </div>
+        )}
+        {tab === "activity" && (
+          <Activity notifications={notifications} onGo={setTab} />
         )}
         {tab === "page" && (
           <div className="space-y-10">
@@ -333,6 +371,7 @@ function Schedule({
   openBroadcasts: Job[];
   onRefresh: () => void;
 }) {
+  const [view, setView] = useState<"agenda" | "month">("agenda");
   const groups = useMemo(() => {
     const m = new Map<string, Job[]>();
     for (const j of appointments) {
@@ -348,14 +387,30 @@ function Schedule({
 
   return (
     <div className="space-y-8">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-wrap items-center justify-between gap-3">
         <SectionHead
           title="Schedule"
           sub="Every claimed shoot across your bench — one calendar for the whole company."
         />
-        <Button variant="ghost" className="text-sm" onClick={onRefresh}>
-          Refresh
-        </Button>
+        <div className="flex items-center gap-2">
+          <div className="flex rounded-full bg-ink-800 p-0.5 text-sm">
+            {(["agenda", "month"] as const).map((v) => (
+              <button
+                key={v}
+                onClick={() => setView(v)}
+                className={clsx(
+                  "rounded-full px-3 py-1.5 font-medium capitalize transition-colors",
+                  view === v ? "bg-amber-brand text-ink-950" : "text-bone/60 hover:text-bone",
+                )}
+              >
+                {v}
+              </button>
+            ))}
+          </div>
+          <Button variant="ghost" className="text-sm" onClick={onRefresh}>
+            Refresh
+          </Button>
+        </div>
       </div>
 
       {openBroadcasts.length > 0 && (
@@ -371,7 +426,9 @@ function Schedule({
         </div>
       )}
 
-      {groups.length === 0 ? (
+      {view === "month" ? (
+        <MonthCalendar appointments={appointments} />
+      ) : groups.length === 0 ? (
         <div className="rounded-2xl border border-dashed border-ink-700 p-10 text-center text-bone/45">
           No shoots on the calendar yet. Broadcast one and it appears here the
           moment a photographer claims it.
@@ -618,6 +675,46 @@ function BenchManager({
           </p>
         </div>
       </div>
+    </div>
+  );
+}
+
+// ---- Activity (notifications) -----------------------------------------------
+
+function Activity({
+  notifications,
+  onGo,
+}: {
+  notifications: Notification[];
+  onGo: (t: Tab) => void;
+}) {
+  const icon = { application: "📥", claim: "✅", inquiry: "✉️" } as const;
+  return (
+    <div className="max-w-2xl">
+      <SectionHead
+        title="Activity"
+        sub="New applications, claims, and inquiries as they happen. (Real email/SMS alerts turn on when you connect a provider.)"
+      />
+      {notifications.length === 0 ? (
+        <div className="rounded-2xl border border-dashed border-ink-700 p-10 text-center text-bone/45">
+          Nothing yet. When a photographer applies, claims a shoot, or a client
+          inquires, it shows up here.
+        </div>
+      ) : (
+        <div className="space-y-2">
+          {notifications.map((n) => (
+            <button
+              key={n.id}
+              onClick={() => onGo(n.type === "inquiry" ? "leads" : n.type === "application" ? "bench" : "schedule")}
+              className="flex w-full items-center gap-3 rounded-xl border border-ink-700 bg-ink-900 p-3 text-left hover:border-ink-600"
+            >
+              <span className="text-lg">{icon[n.type]}</span>
+              <span className="flex-1 text-sm text-bone/85">{n.text}</span>
+              {!n.read && <span className="h-2 w-2 shrink-0 rounded-full bg-amber-brand" />}
+            </button>
+          ))}
+        </div>
+      )}
     </div>
   );
 }

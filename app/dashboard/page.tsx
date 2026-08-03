@@ -3,7 +3,12 @@ import Link from "next/link";
 import { Container, Button } from "@/components/ui";
 import { Dashboard } from "@/components/Dashboard";
 import { currentAccount } from "@/lib/session";
-import { getCompany, listInquiries, getPhotographerRecord } from "@/lib/backend";
+import {
+  getCompany,
+  listInquiries,
+  getPhotographerRecord,
+  listNotifications,
+} from "@/lib/backend";
 import { listJobs } from "@/lib/store";
 import { PhotographerDashboard } from "@/components/PhotographerDashboard";
 import { brand } from "@/lib/brand";
@@ -24,6 +29,7 @@ export default async function DashboardPage() {
       listJobs(),
     ]);
     const jobs = allJobs.filter((j) => j.companySlug === company.slug);
+    const notifications = listNotifications(company.slug);
     return (
       <Container className="py-10 lg:py-14">
         <Dashboard
@@ -31,6 +37,7 @@ export default async function DashboardPage() {
           company={company}
           inquiries={inquiries}
           jobs={jobs}
+          notifications={notifications}
         />
       </Container>
     );

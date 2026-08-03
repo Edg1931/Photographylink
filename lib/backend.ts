@@ -208,6 +208,7 @@ export async function applyToCompany(
     appliedAt: Date.now(),
   };
   await updateCompany(slug, { members: [...company.members, member] });
+  addNotification(slug, "application", `${member.name} applied to your bench`, "/dashboard");
   return { ok: true, member };
 }
 
@@ -313,6 +314,7 @@ export async function accountFromToken(
 // ---- Inquiries --------------------------------------------------------------
 
 export async function createInquiry(input: NewInquiry): Promise<Inquiry> {
+  addNotification(input.companySlug, "inquiry", `New inquiry from ${input.name}`, "/dashboard");
   const sb = getSupabase();
   if (sb) return repo.createInquiry(sb, input);
   const inquiry: Inquiry = {
@@ -332,6 +334,53 @@ export async function listInquiries(companySlug?: string): Promise<Inquiry[]> {
     ? inquiries.filter((i) => i.companySlug === companySlug)
     : inquiries;
   return clone(list);
+}
+
+// ---- Notifications ----------------------------------------------------------
+// In-app activity feed for the company (new applications, claims, inquiries).
+// This is where real email/SMS would fire — see the marked hook below.
+
+export interface Notification {
+  id: string;
+  companySlug: string;
+  type: "application" | "claim" | "inquiry";
+  text: string;
+  href?: string;
+  at: number;
+  read: boolean;
+}
+
+const notifications = new Map<string, Notification[]>();
+
+export function addNotification(
+  companySlug: string,
+  type: Notification["type"],
+  text: string,
+  href?: string,
+): void {
+  const n: Notification = {
+    id: `ntf-${randomUUID().slice(0, 6)}`,
+    companySlug,
+    type,
+    text,
+    href,
+    at: Date.now(),
+    read: false,
+  };
+  const list = notifications.get(companySlug) ?? [];
+  notifications.set(companySlug, [n, ...list].slice(0, 100));
+  // --- Real delivery hook (needs a provider) -------------------------------
+  // Add an email/SMS provider (e.g. Resend / Twilio) and send here so the
+  // owner is alerted off-platform:
+  //   await sendEmail(ownerEmail, text); await sendSms(ownerPhone, text);
+}
+
+export function listNotifications(companySlug: string): Notification[] {
+  return (notifications.get(companySlug) ?? []).map((n) => ({ ...n }));
+}
+
+export function markNotificationsRead(companySlug: string): void {
+  (notifications.get(companySlug) ?? []).forEach((n) => (n.read = true));
 }
 
 // ---- Helpers ----------------------------------------------------------------

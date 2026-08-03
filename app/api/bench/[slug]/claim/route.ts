@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { getMember } from "@/lib/backend";
+import { getMember, addNotification } from "@/lib/backend";
 import { claimJob } from "@/lib/store";
 
 export const dynamic = "force-dynamic";
@@ -35,7 +35,15 @@ export async function POST(
     );
   }
   const result = await claimJob(body.jobId, member.id, member.name);
-  if (result.ok) return NextResponse.json({ ok: true, job: result.job });
+  if (result.ok) {
+    addNotification(
+      params.slug,
+      "claim",
+      `${member.name} claimed "${result.job?.title ?? "a shoot"}"`,
+      "/dashboard",
+    );
+    return NextResponse.json({ ok: true, job: result.job });
+  }
   const status = result.reason === "not_found" ? 404 : 409;
   return NextResponse.json({ ok: false, reason: result.reason }, { status });
 }
