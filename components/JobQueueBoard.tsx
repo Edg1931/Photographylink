@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import { Job, Photographer, Company, Specialty } from "@/lib/data";
+import { Job, Photographer, Company, serviceTypes } from "@/lib/data";
 import { Badge, Button } from "@/components/ui";
 import { clsx } from "@/lib/clsx";
 
@@ -17,7 +17,6 @@ interface ClaimEvent {
 interface Props {
   photographers: Photographer[];
   companies: Company[];
-  specialties: Specialty[];
 }
 
 const statusTone = {
@@ -27,7 +26,7 @@ const statusTone = {
   delivered: "green",
 } as const;
 
-export function JobQueueBoard({ photographers, companies, specialties }: Props) {
+export function JobQueueBoard({ photographers, companies }: Props) {
   const [jobs, setJobs] = useState<Job[]>([]);
   const [log, setLog] = useState<ClaimEvent[]>([]);
   const [actingAs, setActingAs] = useState(photographers[0]?.slug ?? "");
@@ -243,7 +242,6 @@ export function JobQueueBoard({ photographers, companies, specialties }: Props) 
         <div className="flex items-center gap-2">
           <NewJobDialog
             companies={companies}
-            specialties={specialties}
             photographers={photographers}
             onCreated={(msg) => {
               flash(msg, "ok");
@@ -636,12 +634,10 @@ function SkeletonCard() {
 
 function NewJobDialog({
   companies,
-  specialties,
   photographers,
   onCreated,
 }: {
   companies: Company[];
-  specialties: Specialty[];
   photographers: Photographer[];
   onCreated: (msg: string) => void;
 }) {
@@ -650,7 +646,7 @@ function NewJobDialog({
   const [form, setForm] = useState({
     companySlug: companies[0]?.slug ?? "",
     title: "",
-    type: specialties[0] ?? "Real Estate",
+    type: serviceTypes[0].name as string,
     neighborhood: "",
     payout: 220,
     shootAt: "",
@@ -731,17 +727,15 @@ function NewJobDialog({
                   className="input"
                 />
               </Field>
-              <Field label="Type">
+              <Field label="Service">
                 <select
                   value={form.type}
-                  onChange={(e) =>
-                    setForm({ ...form, type: e.target.value as Specialty })
-                  }
+                  onChange={(e) => setForm({ ...form, type: e.target.value })}
                   className="input"
                 >
-                  {specialties.map((s) => (
-                    <option key={s} value={s} className="bg-ink-800">
-                      {s}
+                  {serviceTypes.map((s) => (
+                    <option key={s.name} value={s.name} className="bg-ink-800">
+                      {s.name}
                     </option>
                   ))}
                 </select>

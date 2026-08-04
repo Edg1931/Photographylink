@@ -16,6 +16,31 @@ export type Specialty =
 
 export type EquipmentPolicy = "provided" | "byo" | "either";
 
+// The individual services a shoot is broken into — each is claimed separately,
+// so different photographers can cover different parts of the same property.
+export type ServiceType =
+  | "Photos"
+  | "Matterport"
+  | "Drone"
+  | "Video"
+  | "CubiCasa"
+  | "Floor Plan"
+  | "Twilight";
+
+export const serviceTypes: {
+  name: ServiceType;
+  defaultPay: number;
+  blurb: string;
+}[] = [
+  { name: "Photos", defaultPay: 150, blurb: "Interior + exterior stills" },
+  { name: "Matterport", defaultPay: 120, blurb: "3D dollhouse tour" },
+  { name: "Drone", defaultPay: 100, blurb: "Aerial photos / video" },
+  { name: "Video", defaultPay: 300, blurb: "Listing walkthrough film" },
+  { name: "CubiCasa", defaultPay: 45, blurb: "CubiCasa scan for floor plan" },
+  { name: "Floor Plan", defaultPay: 55, blurb: "2D floor plan" },
+  { name: "Twilight", defaultPay: 90, blurb: "Twilight exteriors" },
+];
+
 export interface Photographer {
   slug: string;
   name: string;
@@ -107,7 +132,7 @@ export interface Job {
   id: string;
   companySlug: string;
   title: string;
-  type: Specialty;
+  type: ServiceType;
   address: string;
   neighborhood: string;
   shootAt: string; // human readable
@@ -475,7 +500,7 @@ export const jobs: Job[] = [
     id: "job-3391",
     companySlug: "lumen-estates",
     title: "3-bed ranch, full listing package",
-    type: "Real Estate",
+    type: "Photos",
     address: "1420 Wildflower Pass",
     neighborhood: "Dripping Springs",
     shootAt: "Tomorrow · 10:00 AM",
@@ -492,7 +517,7 @@ export const jobs: Job[] = [
     id: "job-3389",
     companySlug: "summit-media",
     title: "Client requested Theo — luxury new build",
-    type: "Architecture",
+    type: "Photos",
     address: "18 Enclave Ct",
     neighborhood: "Westlake",
     shootAt: "Sat · 9:00 AM",
@@ -510,7 +535,7 @@ export const jobs: Job[] = [
     id: "job-3390",
     companySlug: "lumen-estates",
     title: "Downtown condo + drone exterior",
-    type: "Drone / Aerial",
+    type: "Drone",
     address: "88 Rainey St, Unit 2104",
     neighborhood: "Rainey District",
     shootAt: "Today · 4:30 PM",
@@ -543,7 +568,7 @@ export const jobs: Job[] = [
     id: "job-3385",
     companySlug: "lumen-estates",
     title: "Standard 4-bed, quick turnaround",
-    type: "Real Estate",
+    type: "Photos",
     address: "312 Meadowlark Ln",
     neighborhood: "Cedar Park",
     shootAt: "Today · 1:00 PM",
@@ -562,7 +587,7 @@ export const jobs: Job[] = [
     id: "job-3382",
     companySlug: "summit-media",
     title: "Luxury interiors + Matterport tour",
-    type: "3D / Virtual Tours",
+    type: "Matterport",
     address: "24 Barton Creek Blvd",
     neighborhood: "Barton Creek",
     shootAt: "Thu · 11:00 AM",

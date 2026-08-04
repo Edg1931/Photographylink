@@ -21,9 +21,10 @@ import {
 import { getSupabase } from "./supabase";
 import * as repo from "./supabase-repo";
 import {
-  isMasterLogin,
-  masterAccount,
-  MASTER_TOKEN,
+  demoLogin,
+  demoTokenFor,
+  demoAccountByToken,
+  isDemoEmail,
   MASTER_EMAIL,
   MASTER_COMPANY,
 } from "./master";
@@ -231,8 +232,8 @@ export async function approveMember(
 // ---- Accounts / sessions ----------------------------------------------------
 
 export async function signUp(input: SignUpInput): Promise<AuthResult> {
-  if (input.email.trim().toLowerCase() === MASTER_EMAIL) {
-    return { ok: false, error: "That email is reserved — just log in with it." };
+  if (isDemoEmail(input.email)) {
+    return { ok: false, error: "That email is a demo login — just sign in with it." };
   }
   const sb = getSupabase();
   if (sb) return repo.signUp(sb, input, newCompanyRecord, newPhotographerRecord, slugBase);
@@ -277,9 +278,10 @@ export async function signUp(input: SignUpInput): Promise<AuthResult> {
 }
 
 export async function logIn(email: string, password: string): Promise<AuthResult> {
-  // Master account: recognized statelessly so it always works, on any instance.
-  if (isMasterLogin(email, password)) {
-    return { ok: true, token: MASTER_TOKEN, account: masterAccount() };
+  // Demo logins: recognized statelessly so they always work, on any instance.
+  const demo = demoLogin(email, password);
+  if (demo) {
+    return { ok: true, token: demoTokenFor(demo.email)!, account: demo };
   }
   const sb = getSupabase();
   if (sb) return repo.logIn(sb, email, password);
@@ -304,8 +306,9 @@ export async function accountFromToken(
   token: string | undefined,
 ): Promise<Account | undefined> {
   if (!token) return undefined;
-  // Master session is recognized without any store lookup.
-  if (token === MASTER_TOKEN) return masterAccount();
+  // Demo sessions are recognized without any store lookup.
+  const demo = demoAccountByToken(token);
+  if (demo) return demo;
   const sb = getSupabase();
   if (sb) return repo.accountFromToken(sb, token);
   const id = sessions.get(token);

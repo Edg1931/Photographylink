@@ -19,7 +19,7 @@ export async function POST(req: Request) {
   const job = await postJob({
     companySlug: body.companySlug,
     title: body.title,
-    type: body.type ?? "Real Estate",
+    type: body.type ?? "Photos",
     neighborhood: body.neighborhood ?? "Austin",
     payout: Number(body.payout) || 200,
     durationHours: Number(body.durationHours) || 2,

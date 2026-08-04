@@ -1,5 +1,5 @@
 import { Container, SectionLabel, Badge } from "@/components/ui";
-import { photographers, companies, allSpecialties } from "@/lib/data";
+import { photographers, companies } from "@/lib/data";
 import { JobQueueBoard } from "@/components/JobQueueBoard";
 import { brand } from "@/lib/brand";
 
@@ -59,7 +59,6 @@ export default function JobsPage() {
           <JobQueueBoard
             photographers={photographers}
             companies={companies}
-            specialties={allSpecialties}
           />
         </Container>
       </section>
