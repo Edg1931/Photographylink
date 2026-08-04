@@ -49,6 +49,7 @@ export interface CompanyPatch {
 export interface PhotographerPatch {
   headline?: string;
   bio?: string;
+  cover?: string;
   location?: string;
   radiusMiles?: number;
   dayRate?: number;

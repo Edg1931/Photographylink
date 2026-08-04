@@ -30,7 +30,7 @@ export default async function PhotographerPage({
   const p = await getPhotographerRecord(params.slug);
   if (!p) notFound();
 
-  const hero = p.portfolio[0]?.src || p.cover;
+  const hero = p.cover || p.portfolio[0]?.src;
 
   return (
     <div>

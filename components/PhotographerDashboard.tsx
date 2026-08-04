@@ -88,7 +88,16 @@ export function PhotographerDashboard({
         </div>
       </div>
 
-      <div className="mt-8 grid gap-6 lg:grid-cols-[1.4fr_1fr]">
+      {/* Cover photo (the hero of your public profile) */}
+      <div className="mt-8">
+        <CoverPicker
+          cover={p.cover}
+          portfolio={p.portfolio}
+          onSet={(src) => { setP({ ...p, cover: src }); patch({ cover: src }); }}
+        />
+      </div>
+
+      <div className="mt-6 grid gap-6 lg:grid-cols-[1.4fr_1fr]">
         {/* Left: profile */}
         <div className="space-y-4">
           <Panel title="About you">
@@ -279,6 +288,76 @@ function PortfolioManager({
           )}
         </div>
       </div>
+    </div>
+  );
+}
+
+function CoverPicker({
+  cover,
+  portfolio,
+  onSet,
+}: {
+  cover?: string;
+  portfolio: Photographer["portfolio"];
+  onSet: (src: string) => void;
+}) {
+  const [uploading, setUploading] = useState(false);
+
+  const onFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setUploading(true);
+    try {
+      onSet(await fileToResizedDataUrl(file, 1600, 0.72));
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  return (
+    <div className="overflow-hidden rounded-2xl border border-ink-700 bg-ink-900">
+      <div className="relative h-44 sm:h-56">
+        {cover ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img src={cover} alt="Cover" className="h-full w-full object-cover" />
+        ) : (
+          <div className="flex h-full items-center justify-center text-sm text-bone/40">
+            No cover photo yet
+          </div>
+        )}
+        <div className="absolute inset-0 bg-gradient-to-t from-ink-950/70 to-transparent" />
+        <div className="absolute bottom-3 left-4">
+          <p className="text-xs uppercase tracking-widest text-bone/60">
+            Cover photo
+          </p>
+          <p className="text-sm font-medium text-bone">
+            The big image at the top of your public profile
+          </p>
+        </div>
+        <label className="absolute bottom-3 right-4 cursor-pointer rounded-full bg-amber-brand px-4 py-2 text-sm font-semibold text-ink-950 hover:bg-amber-soft">
+          {uploading ? "Uploading…" : "Upload cover"}
+          <input type="file" accept="image/*" className="hidden" onChange={onFile} />
+        </label>
+      </div>
+      {portfolio.length > 0 && (
+        <div className="p-4">
+          <p className="mb-2 text-xs text-bone/45">Or use one of your photos:</p>
+          <div className="flex gap-2 overflow-x-auto pb-1">
+            {portfolio.map((shot, i) => (
+              <button
+                key={i}
+                onClick={() => onSet(shot.src)}
+                className={`h-14 w-20 shrink-0 overflow-hidden rounded-lg border-2 ${
+                  cover === shot.src ? "border-amber-brand" : "border-transparent hover:border-ink-500"
+                }`}
+              >
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={shot.src} alt="" className="h-full w-full object-cover" />
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   );
 }

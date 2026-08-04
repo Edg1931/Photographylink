@@ -25,7 +25,9 @@ import {
   masterAccount,
   MASTER_TOKEN,
   MASTER_EMAIL,
+  MASTER_COMPANY,
 } from "./master";
+import { sendEmail, emailEnabled, PLATFORM_INBOX } from "./email";
 import {
   Account,
   Inquiry,
@@ -369,10 +371,31 @@ export function addNotification(
   };
   const list = notifications.get(companySlug) ?? [];
   notifications.set(companySlug, [n, ...list].slice(0, 100));
-  // --- Real delivery hook (needs a provider) -------------------------------
-  // Add an email/SMS provider (e.g. Resend / Twilio) and send here so the
-  // owner is alerted off-platform:
-  //   await sendEmail(ownerEmail, text); await sendSms(ownerPhone, text);
+  // Real off-platform delivery — active once RESEND_API_KEY is set. Fire and
+  // forget so it never blocks the request. (In production, prefer a queue /
+  // edge function so serverless can't cut the request off mid-send.)
+  void deliverEmail(companySlug, text);
+}
+
+async function deliverEmail(companySlug: string, text: string): Promise<void> {
+  if (!emailEnabled()) return;
+  const owner = await ownerEmailForCompany(companySlug);
+  if (owner) await sendEmail(owner, "New activity on your bench", text);
+  if (PLATFORM_INBOX)
+    await sendEmail(PLATFORM_INBOX, "Callsheet activity", `${companySlug}: ${text}`);
+}
+
+/** Find the account email that owns a company (for notifications). */
+export async function ownerEmailForCompany(
+  companySlug: string,
+): Promise<string | undefined> {
+  if (companySlug === MASTER_COMPANY) return MASTER_EMAIL;
+  const sb = getSupabase();
+  if (sb) return repo.ownerEmail(sb, companySlug);
+  for (const a of accounts.values()) {
+    if (a.companySlug === companySlug) return a.email;
+  }
+  return undefined;
 }
 
 export function listNotifications(companySlug: string): Notification[] {

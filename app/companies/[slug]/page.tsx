@@ -7,6 +7,8 @@ import { Container, Badge, Button, Stars, Avatar } from "@/components/ui";
 import { JobCard } from "@/components/JobCard";
 import { InquireButton } from "@/components/InquireButton";
 import { ApplyButton } from "@/components/ApplyButton";
+import { PhotoGallery } from "@/components/PhotoGallery";
+import { ShareProfile } from "@/components/ShareProfile";
 import { brand } from "@/lib/brand";
 
 export const dynamic = "force-dynamic";
@@ -76,13 +78,14 @@ export default async function CompanyPage({
                 </div>
               </div>
             </div>
-            <div className="flex gap-2 pb-1">
+            <div className="flex flex-wrap gap-2 pb-1">
               <InquireButton companySlug={c.slug} companyName={c.name} />
               <ApplyButton
                 companySlug={c.slug}
                 companyName={c.name}
                 variant="outline"
               />
+              <ShareProfile />
             </div>
           </div>
         </Container>
@@ -169,23 +172,8 @@ export default async function CompanyPage({
             <h2 className="mt-10 font-display text-2xl font-semibold">
               Our work
             </h2>
-            <div className="mt-5 grid grid-cols-2 gap-3 sm:grid-cols-3">
-              {c.showcase.map((s, i) => (
-                <figure
-                  key={i}
-                  className={`group relative overflow-hidden rounded-2xl border border-ink-700 ${
-                    i === 0 ? "col-span-2 row-span-2 aspect-square" : "aspect-square"
-                  }`}
-                >
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img
-                    src={s.src}
-                    alt={s.label}
-                    loading="lazy"
-                    className="h-full w-full object-cover transition-transform duration-700 group-hover:scale-105"
-                  />
-                </figure>
-              ))}
+            <div className="mt-5">
+              <PhotoGallery items={c.showcase} />
             </div>
 
             {/* Open jobs */}

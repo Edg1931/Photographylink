@@ -166,6 +166,7 @@ function photographerPatchRow(p: PhotographerPatch) {
   const row: Record<string, unknown> = {};
   if (p.headline !== undefined) row.headline = p.headline;
   if (p.bio !== undefined) row.bio = p.bio;
+  if (p.cover !== undefined) row.cover = p.cover;
   if (p.location !== undefined) row.location = p.location;
   if (p.radiusMiles !== undefined) row.radius_miles = p.radiusMiles;
   if (p.dayRate !== undefined) row.day_rate = p.dayRate;
@@ -473,6 +474,18 @@ async function newSession(sb: SupabaseClient, accountId: string): Promise<string
 
 export async function logOut(sb: SupabaseClient, token: string): Promise<void> {
   await sb.from("sessions").delete().eq("token", token);
+}
+
+export async function ownerEmail(
+  sb: SupabaseClient,
+  companySlug: string,
+): Promise<string | undefined> {
+  const { data } = await sb
+    .from("accounts")
+    .select("email")
+    .eq("company_slug", companySlug)
+    .maybeSingle();
+  return data?.email ?? undefined;
 }
 
 export async function accountFromToken(
