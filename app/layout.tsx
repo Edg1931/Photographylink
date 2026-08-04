@@ -5,14 +5,14 @@ import { SiteFooter } from "@/components/SiteFooter";
 import { brand } from "@/lib/brand";
 
 export const metadata: Metadata = {
-  title: `${brand.name} — the bench that never misses a shoot`,
+  title: `${brand.name} — build your bench of photographers`,
   description:
-    "The two-sided platform where photography companies build a trained bench of shooters and freelancers find steady, transparent work. Post a job to your queue; the first qualified pro claims it.",
+    "Photography companies build a private bench of photographers they trust, then send each shoot to the people they choose — the first of your approved photographers to claim it gets it. Scale your studio without re-hiring; steady freelance work for photographers.",
   metadataBase: new URL("https://callsheet.example"),
   openGraph: {
     title: brand.name,
     description:
-      "Build a bench. Claim the queue. Never turn down a shoot again.",
+      "Build your bench. Send work to your crew. Scale without the churn.",
     type: "website",
   },
 };

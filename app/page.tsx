@@ -24,20 +24,22 @@ export default function HomePage() {
           <div className="reveal">
             <Badge tone="amber" className="mb-6">
               <span className="live-dot h-1.5 w-1.5 rounded-full bg-amber-brand" />
-              {open.length} shoots open right now in Central Texas
+              Your own crew, on call — not an open marketplace
             </Badge>
             <h1 className="font-display text-5xl font-semibold leading-[1.02] tracking-tight sm:text-6xl lg:text-[4.4rem]">
-              Build a bench.
+              Build your bench.
               <br />
-              <span className="text-amber-brand">Claim the queue.</span>
+              <span className="text-amber-brand">Send work to your crew.</span>
               <br />
-              Never turn down a shoot.
+              Scale without the churn.
             </h1>
             <p className="mt-6 max-w-xl text-lg leading-relaxed text-bone/70">
-              {brand.name} connects photography companies with a trained,
-              rated bench of freelance shooters. Post a job to your queue — the
-              first qualified pro in the area claims it. Consistency without the
-              constant re-hiring.
+              {brand.name} lets photography companies build a private bench of
+              photographers they trust — then send each shoot to the people they
+              choose. Only your approved photographers see the work, and the
+              first of them to claim it gets it. Grow your studio without the
+              constant re-hiring — and give photographers steady freelance work
+              with the companies they join.
             </p>
             <div className="mt-8 flex flex-wrap items-center gap-3">
               <Button href="/signup" className="px-6 py-3 text-base">
@@ -173,13 +175,15 @@ export default function HomePage() {
           <div>
             <SectionLabel>The core idea</SectionLabel>
             <h2 className="mt-5 font-display text-3xl font-semibold leading-tight sm:text-4xl">
-              A trained bench that claims from a queue.
+              Send each shoot to the photographers you choose.
             </h2>
             <p className="mt-5 text-lg leading-relaxed text-bone/65">
-              Instead of one photographer with finite hours, keep a stable of
-              vetted shooters who already know your style. Drop a job into the
-              queue and the first qualified, available, well-rated pro claims
-              it. You scale past any single person&apos;s calendar.
+              This isn&apos;t an open job board. You build a private bench of
+              photographers you&apos;ve vetted and approved — then send a shoot
+              to your whole bench or offer it to one person. The first of{" "}
+              <em className="not-italic text-bone">your</em> photographers to
+              claim it gets it: someone who already knows how you work. That&apos;s
+              how you scale past any single person&apos;s calendar.
             </p>
             <ul className="mt-8 space-y-4">
               {QUEUE_POINTS.map((q) => (
@@ -211,13 +215,14 @@ export default function HomePage() {
           <Reveal className="grid gap-5 lg:grid-cols-2">
             <ValueCard
               tone="amber"
-              eyebrow="For companies"
-              title="Scale without the hiring treadmill"
+              eyebrow="For photography companies"
+              title="Build a pipeline, not a one-off hire"
               points={[
-                "Build a bench of pre-trained, rated photographers",
-                "Post overflow, vacation, and multi-shooter jobs to a queue",
-                "Advertise your rates & equipment policy up front",
-                "A branded micro-site that showcases your work",
+                "Approve photographers onto your own private bench",
+                "Send each shoot to your whole bench — or one person",
+                "Only your approved photographers can claim your work",
+                "Cover overflow, vacations & multi-shooter days on demand",
+                "A branded micro-site with your rates, terms & work",
               ]}
               href="/how-it-works"
               cta="Build your bench"
@@ -225,12 +230,12 @@ export default function HomePage() {
             <ValueCard
               tone="blue"
               eyebrow="For photographers"
-              title="Steady freelance work, on your terms"
+              title="Steady freelance work with companies you join"
               points={[
-                "Set the rate and radius you'll work for",
-                "Claim jobs that fit your schedule — no bidding wars",
-                "Carry your rating between every company you shoot for",
-                "A portfolio site that sells you while you sleep",
+                "Apply to the companies whose rates & work fit you",
+                "Get sent jobs from every bench you're on — claim what fits",
+                "No bidding wars — you're already approved",
+                "Carry your rating and portfolio everywhere you shoot",
               ]}
               href="/photographers"
               cta="Create your profile"
@@ -456,15 +461,15 @@ const PROBLEMS = [
 
 const QUEUE_POINTS = [
   {
-    title: "Post once, cover instantly",
-    body: "Vacation, a sick day, or a five-house Saturday — drop it in the queue and it gets claimed.",
+    title: "You choose who's on your bench",
+    body: "Photographers apply or you invite them — you approve who's allowed to claim your work. Strangers never see your jobs.",
   },
   {
-    title: "Only your trained shooters see it",
-    body: "The bench is vetted and style-matched, so whoever claims it already knows how you deliver.",
+    title: "Send it to everyone, or one person",
+    body: "Broadcast a shoot to your whole bench, or offer it directly to a specific photographer. You stay in control.",
   },
   {
-    title: "Ratings keep the bar high",
-    body: "On-time rate, quality scores, and reviews travel with each photographer across every job.",
+    title: "Covered instantly, by someone who knows you",
+    body: "Vacation, a sick day, or a five-house Saturday — the first of your approved photographers to claim it gets it.",
   },
 ];

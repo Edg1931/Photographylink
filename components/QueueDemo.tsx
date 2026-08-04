@@ -50,7 +50,7 @@ export function QueueDemo() {
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2 text-xs font-medium text-bone/55">
           <span className="live-dot h-2 w-2 rounded-full bg-emerald-400" />
-          Lumen Estates · live queue
+          Lumen Estates · your bench
         </div>
         <span className="text-xs text-bone/35">Austin, TX</span>
       </div>
