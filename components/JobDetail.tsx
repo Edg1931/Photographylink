@@ -194,6 +194,24 @@ export function JobDetail({
 
         {/* Action rail */}
         <aside className="space-y-4">
+          {/* Earnings — what the photographer takes home */}
+          <div className="overflow-hidden rounded-2xl border border-amber-brand/25 bg-gradient-to-br from-ink-800 to-ink-900 p-5">
+            <p className="text-xs uppercase tracking-widest text-bone/50">
+              You earn
+            </p>
+            <p className="font-display text-4xl font-semibold text-amber-soft">
+              ${job.payout}
+            </p>
+            <div className="mt-3 space-y-1.5 border-t border-ink-700 pt-3 text-sm">
+              <Row label="Job payout" value={`$${job.payout}`} />
+              <Row label="Platform fee" value="$0" muted />
+              <Row label="You keep" value={`$${job.payout}`} strong />
+            </div>
+            <p className="mt-2 text-xs text-bone/40">
+              Photographers keep 100%. Logged automatically for your taxes.
+            </p>
+          </div>
+
           <div className="rounded-2xl border border-ink-700 bg-ink-900 p-5">
             <h2 className="text-sm font-semibold text-bone">Take this job</h2>
             <label className="mt-3 block text-xs text-bone/50">
@@ -314,6 +332,32 @@ export function JobDetail({
         </aside>
       </div>
     </Container>
+  );
+}
+
+function Row({
+  label,
+  value,
+  strong,
+  muted,
+}: {
+  label: string;
+  value: string;
+  strong?: boolean;
+  muted?: boolean;
+}) {
+  return (
+    <div className="flex items-center justify-between">
+      <span className={muted ? "text-bone/40" : "text-bone/60"}>{label}</span>
+      <span
+        className={clsx(
+          strong ? "font-semibold text-bone" : "text-bone/80",
+          muted && "text-bone/40",
+        )}
+      >
+        {value}
+      </span>
+    </div>
   );
 }
 
