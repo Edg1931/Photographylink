@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Job } from "@/lib/data";
 import { Container } from "@/components/ui";
+import { PAYOUT_DAYS } from "@/lib/economics";
 import { clsx } from "@/lib/clsx";
 
 export function BenchClaim({
@@ -116,6 +117,18 @@ export function BenchClaim({
                 <span className="shrink-0 text-lg font-semibold text-amber-soft">${j.payout}</span>
               </div>
               <p className="mt-2 text-sm text-bone/55">{j.deliverables}</p>
+              <div className="mt-3 flex flex-wrap gap-1.5">
+                <Chip>{j.type}</Chip>
+                <Chip>{j.durationHours} hr</Chip>
+                <Chip>
+                  {j.equipment === "byo"
+                    ? "Bring your kit"
+                    : j.equipment === "provided"
+                      ? "Gear provided"
+                      : "Gear optional"}
+                </Chip>
+                <Chip accent>💵 Pays in {PAYOUT_DAYS} days</Chip>
+              </div>
               {j.assignedToSlug === member.id && (
                 <p className="mt-2 text-xs font-medium text-sky-300">
                   ⭐ Offered directly to you
@@ -171,5 +184,19 @@ export function BenchClaim({
         </div>
       )}
     </Container>
+  );
+}
+
+function Chip({ children, accent }: { children: React.ReactNode; accent?: boolean }) {
+  return (
+    <span
+      className={
+        accent
+          ? "rounded-full bg-amber-brand/12 px-2.5 py-1 text-xs font-medium text-amber-soft ring-1 ring-inset ring-amber-brand/25"
+          : "rounded-full bg-ink-800 px-2.5 py-1 text-xs font-medium text-bone/60"
+      }
+    >
+      {children}
+    </span>
   );
 }

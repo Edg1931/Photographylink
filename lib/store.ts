@@ -196,6 +196,7 @@ export async function postJob(input: NewJobInput): Promise<Job> {
     postedAgo: "just now",
     durationHours: input.durationHours || 2,
     payout: input.payout || 200,
+    clientPrice: input.clientPrice || undefined,
     deliverables: input.deliverables || "Standard listing gallery",
     equipment: input.equipment,
     status: "open",

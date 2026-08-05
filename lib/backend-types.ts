@@ -94,4 +94,5 @@ export interface NewJobInput {
   urgency: Job["urgency"];
   assignedToSlug?: string;
   date?: string;
+  clientPrice?: number;
 }

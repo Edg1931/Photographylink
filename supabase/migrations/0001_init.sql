@@ -76,6 +76,7 @@ create table if not exists public.jobs (
   posted_ago     text not null default 'just now',
   duration_hours numeric not null default 2,
   payout         int not null default 200,
+  client_price   int,
   deliverables   text not null default '',
   equipment      text not null default 'byo',
   status          text not null default 'open',

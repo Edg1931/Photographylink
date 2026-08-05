@@ -4,6 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { Button } from "@/components/ui";
 import { serviceTypes, Member } from "@/lib/data";
+import { PLATFORM_FEE_PCT, money } from "@/lib/economics";
 import { clsx } from "@/lib/clsx";
 
 export function PostJobForm({
@@ -29,6 +30,7 @@ export function PostJobForm({
       name: s.name,
       blurb: s.blurb,
       pay: s.defaultPay,
+      client: s.defaultClient,
       on: s.name === "Photos",
     })),
   );
@@ -37,9 +39,9 @@ export function PostJobForm({
     setServices((list) =>
       list.map((s) => (s.name === name ? { ...s, on: !s.on } : s)),
     );
-  const setPay = (name: string, pay: number) =>
+  const setField = (name: string, field: "pay" | "client", v: number) =>
     setServices((list) =>
-      list.map((s) => (s.name === name ? { ...s, pay } : s)),
+      list.map((s) => (s.name === name ? { ...s, [field]: v } : s)),
     );
 
   const selected = services.filter((s) => s.on);
@@ -74,6 +76,7 @@ export function PostJobForm({
               durationHours: 1,
               shootAt,
               date: iso || undefined,
+              clientPrice: s.client,
               deliverables: s.blurb,
               equipment: "byo",
               urgency: "standard",
@@ -91,7 +94,10 @@ export function PostJobForm({
     }
   };
 
-  const total = selected.reduce((sum, s) => sum + s.pay, 0);
+  const payTotal = selected.reduce((sum, s) => sum + s.pay, 0);
+  const clientTotal = selected.reduce((sum, s) => sum + s.client, 0);
+  const fee = Math.round(payTotal * PLATFORM_FEE_PCT * 100) / 100;
+  const margin = Math.round((clientTotal - payTotal - fee) * 100) / 100;
 
   return (
     <div className="max-w-2xl">
@@ -147,19 +153,31 @@ export function PostJobForm({
                 <p className="text-sm font-medium text-bone">{s.name}</p>
                 <p className="truncate text-xs text-bone/45">{s.blurb}</p>
               </div>
-              <div className="flex items-center gap-1 text-sm text-bone/70">
-                <span className="text-bone/40">$</span>
-                <input
-                  type="number"
-                  value={s.pay}
-                  onChange={(e) => setPay(s.name, Number(e.target.value))}
-                  disabled={!s.on}
-                  className="w-20 rounded-lg border border-ink-600 bg-ink-800 px-2 py-1 text-sm text-bone disabled:opacity-40 focus:border-amber-brand/50 focus:outline-none"
-                />
+              <div className="flex items-center gap-3">
+                <PriceInput label="Client" value={s.client} disabled={!s.on} onChange={(v) => setField(s.name, "client", v)} />
+                <PriceInput label="Pay" value={s.pay} disabled={!s.on} onChange={(v) => setField(s.name, "pay", v)} accent />
               </div>
             </div>
           ))}
         </div>
+
+        {/* Live margin */}
+        {selected.length > 0 && (
+          <div className="mt-3 grid grid-cols-3 gap-2 rounded-xl border border-ink-700 bg-ink-950 p-3 text-center text-sm">
+            <div>
+              <p className="text-[11px] uppercase tracking-wide text-bone/40">Client pays</p>
+              <p className="font-semibold text-bone">{money(clientTotal)}</p>
+            </div>
+            <div>
+              <p className="text-[11px] uppercase tracking-wide text-bone/40">Photographers</p>
+              <p className="font-semibold text-bone">{money(payTotal)}</p>
+            </div>
+            <div>
+              <p className="text-[11px] uppercase tracking-wide text-bone/40">Your net</p>
+              <p className="font-semibold text-emerald-300">{money(margin)}</p>
+            </div>
+          </div>
+        )}
 
         {/* Who gets it */}
         <p className="mb-2 mt-5 text-xs font-medium uppercase tracking-wide text-bone/45">
@@ -182,7 +200,7 @@ export function PostJobForm({
           <Button onClick={submit} disabled={busy || selected.length === 0}>
             {busy
               ? "Posting…"
-              : `Post ${selected.length} service${selected.length === 1 ? "" : "s"} · $${total}`}
+              : `Post ${selected.length} service${selected.length === 1 ? "" : "s"}`}
           </Button>
           {postedCount !== null && (
             <span className="text-sm text-emerald-300">
@@ -195,6 +213,39 @@ export function PostJobForm({
         </div>
       </div>
     </div>
+  );
+}
+
+function PriceInput({
+  label,
+  value,
+  onChange,
+  disabled,
+  accent,
+}: {
+  label: string;
+  value: number;
+  onChange: (v: number) => void;
+  disabled?: boolean;
+  accent?: boolean;
+}) {
+  return (
+    <label className="flex flex-col items-center gap-0.5">
+      <span className="text-[9px] uppercase tracking-wide text-bone/40">{label}</span>
+      <span className="flex items-center gap-0.5">
+        <span className="text-xs text-bone/40">$</span>
+        <input
+          type="number"
+          value={value}
+          disabled={disabled}
+          onChange={(e) => onChange(Number(e.target.value))}
+          className={clsx(
+            "w-16 rounded-lg border bg-ink-800 px-2 py-1 text-sm disabled:opacity-40 focus:outline-none",
+            accent ? "border-amber-brand/40 text-amber-soft" : "border-ink-600 text-bone",
+          )}
+        />
+      </span>
+    </label>
   );
 }
 

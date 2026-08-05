@@ -29,6 +29,7 @@ import {
   MASTER_COMPANY,
 } from "./master";
 import { sendEmail, emailEnabled, PLATFORM_INBOX } from "./email";
+import { sendSms, smsEnabled } from "./sms";
 import {
   Account,
   Inquiry,
@@ -407,6 +408,29 @@ export function listNotifications(companySlug: string): Notification[] {
 
 export function markNotificationsRead(companySlug: string): void {
   (notifications.get(companySlug) ?? []).forEach((n) => (n.read = true));
+}
+
+/** Text the bench when a shoot is posted (active members with a phone). */
+export async function textBenchAboutJob(
+  companySlug: string,
+  title: string,
+  assignedToSlug?: string,
+): Promise<void> {
+  if (!smsEnabled()) return;
+  const company = await getCompany(companySlug);
+  if (!company) return;
+  const targets = company.members.filter(
+    (m) =>
+      m.status === "active" &&
+      m.phone &&
+      (!assignedToSlug || m.id === assignedToSlug),
+  );
+  const msg = assignedToSlug
+    ? `New shoot offered to you: ${title}. Open Callsheet to accept.`
+    : `New shoot available: ${title}. First to claim gets it — open Callsheet.`;
+  for (const m of targets) {
+    if (m.phone) await sendSms(m.phone, msg);
+  }
 }
 
 // ---- Helpers ----------------------------------------------------------------

@@ -29,16 +29,17 @@ export type ServiceType =
 
 export const serviceTypes: {
   name: ServiceType;
-  defaultPay: number;
+  defaultPay: number; // to the photographer
+  defaultClient: number; // what the client is charged
   blurb: string;
 }[] = [
-  { name: "Photos", defaultPay: 150, blurb: "Interior + exterior stills" },
-  { name: "Matterport", defaultPay: 120, blurb: "3D dollhouse tour" },
-  { name: "Drone", defaultPay: 100, blurb: "Aerial photos / video" },
-  { name: "Video", defaultPay: 300, blurb: "Listing walkthrough film" },
-  { name: "CubiCasa", defaultPay: 45, blurb: "CubiCasa scan for floor plan" },
-  { name: "Floor Plan", defaultPay: 55, blurb: "2D floor plan" },
-  { name: "Twilight", defaultPay: 90, blurb: "Twilight exteriors" },
+  { name: "Photos", defaultPay: 150, defaultClient: 250, blurb: "Interior + exterior stills" },
+  { name: "Matterport", defaultPay: 120, defaultClient: 200, blurb: "3D dollhouse tour" },
+  { name: "Drone", defaultPay: 100, defaultClient: 175, blurb: "Aerial photos / video" },
+  { name: "Video", defaultPay: 300, defaultClient: 500, blurb: "Listing walkthrough film" },
+  { name: "CubiCasa", defaultPay: 45, defaultClient: 90, blurb: "CubiCasa scan for floor plan" },
+  { name: "Floor Plan", defaultPay: 55, defaultClient: 110, blurb: "2D floor plan" },
+  { name: "Twilight", defaultPay: 90, defaultClient: 160, blurb: "Twilight exteriors" },
 ];
 
 export interface Photographer {
@@ -138,7 +139,8 @@ export interface Job {
   shootAt: string; // human readable
   postedAgo: string;
   durationHours: number;
-  payout: number;
+  payout: number; // what the photographer earns
+  clientPrice?: number; // what the client is charged (for margin/accounting)
   deliverables: string;
   equipment: EquipmentPolicy;
   status: JobStatus;

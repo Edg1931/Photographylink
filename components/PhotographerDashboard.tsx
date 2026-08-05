@@ -1,9 +1,10 @@
 "use client";
 
-import { useState } from "react";
-import { Photographer, Specialty, allSpecialties } from "@/lib/data";
+import { useEffect, useState } from "react";
+import { Photographer, Specialty, Job, allSpecialties } from "@/lib/data";
 import { Button } from "@/components/ui";
 import { fileToResizedDataUrl } from "@/lib/resizeImage";
+import { money, PAYOUT_DAYS } from "@/lib/economics";
 import { clsx } from "@/lib/clsx";
 
 export function PhotographerDashboard({
@@ -88,8 +89,13 @@ export function PhotographerDashboard({
         </div>
       </div>
 
-      {/* Cover photo (the hero of your public profile) */}
+      {/* Earnings */}
       <div className="mt-8">
+        <Earnings name={p.name} slug={p.slug} />
+      </div>
+
+      {/* Cover photo (the hero of your public profile) */}
+      <div className="mt-6">
         <CoverPicker
           cover={p.cover}
           portfolio={p.portfolio}
@@ -288,6 +294,76 @@ function PortfolioManager({
           )}
         </div>
       </div>
+    </div>
+  );
+}
+
+function Earnings({ name, slug }: { name: string; slug: string }) {
+  const [jobs, setJobs] = useState<Job[] | null>(null);
+
+  useEffect(() => {
+    fetch("/api/jobs", { cache: "no-store" })
+      .then((r) => r.json())
+      .then((d) =>
+        setJobs(
+          (d.jobs as Job[]).filter(
+            (j) => j.claimedByName === name || j.claimedBySlug === slug,
+          ),
+        ),
+      )
+      .catch(() => setJobs([]));
+  }, [name, slug]);
+
+  const mine = jobs ?? [];
+  const total = mine.reduce((s, j) => s + j.payout, 0);
+  const delivered = mine.filter((j) => j.status === "delivered");
+  const upcoming = mine.filter((j) => j.status !== "delivered");
+  const paid = delivered.reduce((s, j) => s + j.payout, 0);
+
+  return (
+    <div className="overflow-hidden rounded-2xl border border-amber-brand/25 bg-gradient-to-br from-ink-800 to-ink-900 p-5">
+      <div className="flex flex-wrap items-center justify-between gap-4">
+        <div>
+          <p className="text-xs uppercase tracking-widest text-bone/50">
+            Earnings — you keep 100%
+          </p>
+          <p className="mt-1 font-display text-4xl font-semibold text-amber-soft">
+            {money(total)}
+          </p>
+          <p className="mt-1 text-sm text-bone/55">
+            across {mine.length} shoot{mine.length === 1 ? "" : "s"} · paid in{" "}
+            {PAYOUT_DAYS} days after delivery
+          </p>
+        </div>
+        <div className="flex gap-3 text-center">
+          <MiniStat label="Upcoming" value={String(upcoming.length)} />
+          <MiniStat label="Delivered" value={String(delivered.length)} />
+          <MiniStat label="1099 total" value={money(paid)} />
+        </div>
+      </div>
+      {mine.length > 0 && (
+        <div className="mt-4 space-y-1.5 border-t border-ink-700 pt-3">
+          {mine.slice(0, 4).map((j) => (
+            <div key={j.id} className="flex items-center justify-between text-sm">
+              <span className="truncate text-bone/70">{j.title}</span>
+              <span className="tabular-nums text-bone/80">{money(j.payout)}</span>
+            </div>
+          ))}
+        </div>
+      )}
+      <p className="mt-3 text-xs text-bone/40">
+        Tracked automatically for taxes. Direct-deposit payouts turn on with the
+        payments launch.
+      </p>
+    </div>
+  );
+}
+
+function MiniStat({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="rounded-xl border border-ink-700 bg-ink-950 px-3 py-2">
+      <p className="text-[10px] uppercase tracking-wide text-bone/40">{label}</p>
+      <p className="mt-0.5 text-sm font-semibold text-bone">{value}</p>
     </div>
   );
 }

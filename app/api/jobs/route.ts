@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { listJobs, postJob, NewJobInput } from "@/lib/store";
+import { textBenchAboutJob } from "@/lib/backend";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -29,6 +30,9 @@ export async function POST(req: Request) {
     urgency: body.urgency ?? "standard",
     assignedToSlug: body.assignedToSlug || undefined,
     date: body.date || undefined,
+    clientPrice: body.clientPrice ? Number(body.clientPrice) : undefined,
   });
+  // Text the bench (no-op until Twilio is configured).
+  void textBenchAboutJob(job.companySlug, job.title, job.assignedToSlug);
   return NextResponse.json({ job }, { status: 201 });
 }

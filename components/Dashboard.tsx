@@ -13,6 +13,7 @@ import {
 import { Button, Badge } from "@/components/ui";
 import { PostJobForm } from "@/components/PostJobForm";
 import { MonthCalendar } from "@/components/MonthCalendar";
+import { economicsFor, money } from "@/lib/economics";
 import { clsx } from "@/lib/clsx";
 
 interface Inquiry {
@@ -40,6 +41,7 @@ type Tab =
   | "schedule"
   | "bench"
   | "broadcast"
+  | "books"
   | "leads"
   | "activity"
   | "page";
@@ -136,6 +138,7 @@ export function Dashboard({
     { key: "schedule", label: "Schedule", badge: appointments.length },
     { key: "bench", label: "My bench", badge: co.members.length },
     { key: "broadcast", label: "Broadcast a shoot" },
+    { key: "books", label: "Books" },
     { key: "leads", label: "Leads", badge: inquiries.length },
     { key: "activity", label: "Activity", badge: unread },
     { key: "page", label: "My public page" },
@@ -240,6 +243,7 @@ export function Dashboard({
             <Inquiries inquiries={inquiries} onRefresh={refreshInquiries} />
           </div>
         )}
+        {tab === "books" && <Books jobs={jobs} />}
         {tab === "activity" && (
           <Activity notifications={notifications} onGo={setTab} />
         )}
@@ -675,6 +679,99 @@ function BenchManager({
           </p>
         </div>
       </div>
+    </div>
+  );
+}
+
+// ---- Books (accounting) -----------------------------------------------------
+
+function Books({ jobs }: { jobs: Job[] }) {
+  // Money is real once a job is claimed (someone's getting paid).
+  const billable = jobs.filter((j) => j.status !== "open");
+  const rows = billable.map((j) => ({ job: j, ec: economicsFor(j) }));
+  const t = rows.reduce(
+    (acc, r) => ({
+      client: acc.client + r.ec.clientPrice,
+      pay: acc.pay + r.ec.payout,
+      fee: acc.fee + r.ec.fee,
+      net: acc.net + r.ec.net,
+    }),
+    { client: 0, pay: 0, fee: 0, net: 0 },
+  );
+
+  return (
+    <div>
+      <SectionHead
+        title="Books"
+        sub="What you charge, what you pay photographers, the platform fee, and what you keep — per job and in total. Ready to export to QuickBooks / Xero when payments go live."
+      />
+
+      <div className="mb-6 grid grid-cols-2 gap-3 lg:grid-cols-4">
+        <Metric label="Client revenue" value={money(t.client)} />
+        <Metric label="Photographer payouts" value={money(t.pay)} />
+        <Metric label="Platform fees" value={money(t.fee)} />
+        <Metric label="Your net" value={money(t.net)} accent />
+      </div>
+
+      {rows.length === 0 ? (
+        <div className="rounded-2xl border border-dashed border-ink-700 p-10 text-center text-bone/45">
+          Nothing billable yet. Once a photographer claims a shoot, the numbers
+          show up here.
+        </div>
+      ) : (
+        <div className="overflow-x-auto rounded-2xl border border-ink-700">
+          <table className="w-full min-w-[560px] text-sm">
+            <thead>
+              <tr className="border-b border-ink-700 text-left text-[11px] uppercase tracking-wide text-bone/40">
+                <th className="px-4 py-3 font-medium">Job</th>
+                <th className="px-4 py-3 font-medium">Photographer</th>
+                <th className="px-4 py-3 text-right font-medium">Client</th>
+                <th className="px-4 py-3 text-right font-medium">Payout</th>
+                <th className="px-4 py-3 text-right font-medium">Fee</th>
+                <th className="px-4 py-3 text-right font-medium">Net</th>
+              </tr>
+            </thead>
+            <tbody>
+              {rows.map(({ job, ec }) => (
+                <tr key={job.id} className="border-b border-ink-800 last:border-0">
+                  <td className="px-4 py-3">
+                    <Link href={`/jobs/${job.id}`} className="text-bone hover:text-amber-soft">
+                      {job.title}
+                    </Link>
+                    <span className="ml-2 rounded bg-ink-800 px-1.5 py-0.5 text-[10px] text-bone/50">
+                      {job.status}
+                    </span>
+                  </td>
+                  <td className="px-4 py-3 text-bone/60">{job.claimedByName ?? "—"}</td>
+                  <td className="px-4 py-3 text-right tabular-nums text-bone/80">{money(ec.clientPrice)}</td>
+                  <td className="px-4 py-3 text-right tabular-nums text-bone/60">−{money(ec.payout)}</td>
+                  <td className="px-4 py-3 text-right tabular-nums text-bone/40">−{money(ec.fee)}</td>
+                  <td className="px-4 py-3 text-right font-semibold tabular-nums text-emerald-300">{money(ec.net)}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+
+      <div className="mt-4 flex flex-wrap items-center gap-3">
+        <Button variant="outline">Export CSV</Button>
+        <span className="text-xs text-bone/40">
+          Card payments &amp; automatic photographer payouts turn on with Stripe
+          Connect (next phase).
+        </span>
+      </div>
+    </div>
+  );
+}
+
+function Metric({ label, value, accent }: { label: string; value: string; accent?: boolean }) {
+  return (
+    <div className="rounded-2xl border border-ink-700 bg-ink-900 p-4">
+      <p className="text-[11px] uppercase tracking-wide text-bone/40">{label}</p>
+      <p className={clsx("mt-1 font-display text-2xl font-semibold", accent ? "text-emerald-300" : "text-bone")}>
+        {value}
+      </p>
     </div>
   );
 }
