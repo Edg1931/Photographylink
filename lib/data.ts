@@ -98,6 +98,19 @@ export interface Member {
   appliedAt?: number;
 }
 
+// A client of the company — usually a real-estate agent or brokerage. The
+// company stores their contact + preferences so photographers know how the
+// client likes their shoots done and can reach them from the job.
+export interface Client {
+  id: string;
+  name: string;
+  brokerage?: string;
+  email?: string;
+  phone?: string;
+  notes?: string; // preferences: "shoot bright & airy", "gate code 4417", etc.
+  createdAt?: number;
+}
+
 export interface Company {
   slug: string;
   name: string;
@@ -124,6 +137,7 @@ export interface Company {
   offerings: Offering[]; // productized services shown on the micro-site
   bench: QueueSlot[]; // the "stable" of trained photographers (seed/showcase)
   members: Member[]; // the company's managed roster (dashboard)
+  clients: Client[]; // the company's clients / agents (CRM)
   showcase: { src: string; label: string }[];
 }
 
@@ -153,6 +167,8 @@ export interface Job {
   // Scheduled shoot time (ISO). When a dated job is claimed it becomes an
   // appointment on the company and the photographer's calendar.
   date?: string;
+  // The client this shoot is for (agent/brokerage) — links to Company.clients.
+  clientId?: string;
   urgency: "standard" | "rush" | "flexible";
 }
 
@@ -413,6 +429,10 @@ export const companies: Company[] = [
       { id: "mem-priya", name: "Priya Raman", email: "priya@lumenestates.co", phone: "512-555-0119", rate: 350, status: "active", avatar: "https://i.pravatar.cc/120?img=45", photographerSlug: "priya-raman" },
       { id: "mem-sam", name: "Sam Whitfield", email: "sam@lumenestates.co", rate: 650, status: "invited", avatar: "https://i.pravatar.cc/120?img=68", photographerSlug: "sam-whitfield" },
     ],
+    clients: [
+      { id: "cl-rivera", name: "Jordan Rivera", brokerage: "Compass", email: "jordan@compass.com", phone: "512-555-0170", notes: "Loves bright & airy edits. Always wants a drone shot. Text before arriving — dogs on site." },
+      { id: "cl-okonkwo", name: "Amara Okonkwo", brokerage: "Keller Williams", email: "amara@kw.com", phone: "512-555-0186", notes: "Luxury listings only. Prefers twilight add-on. Lockbox code sent day-of." },
+    ],
     showcase: [
       { src: img("photo-1600585154340-be6161a56a0c"), label: "Signature twilight" },
       { src: img("photo-1600566753086-00f18fb6b3ea"), label: "Kitchen standard" },
@@ -481,6 +501,9 @@ export const companies: Company[] = [
     members: [
       { id: "mem-theo", name: "Theo Brandt", email: "theo@summitmedia.co", rate: 700, status: "active", avatar: "https://i.pravatar.cc/120?img=15", photographerSlug: "theo-brandt" },
       { id: "mem-harper", name: "Harper Lin", email: "harper@summitmedia.co", rate: 380, status: "active", avatar: "https://i.pravatar.cc/120?img=32", photographerSlug: "harper-lin" },
+    ],
+    clients: [
+      { id: "cl-vance", name: "Priya Vance", brokerage: "Sotheby's", email: "priya@sothebys.com", phone: "512-555-0140", notes: "New construction specialist. Wants magazine-grade verticals. No wide-angle distortion." },
     ],
     showcase: [
       { src: img("photo-1600573472550-8090b5e0745e"), label: "Pool reveal" },

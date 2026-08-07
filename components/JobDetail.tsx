@@ -103,6 +103,7 @@ export function JobDetail({
   }
 
   const company = companyById(job.companySlug);
+  const client = company?.clients?.find((c) => c.id === job.clientId);
   const claimer = byId(job.claimedBySlug);
   const offered = byId(job.assignedToSlug);
   const forMe = job.assignedToSlug === actingAs;
@@ -328,6 +329,44 @@ export function JobDetail({
                 View company micro-site →
               </p>
             </Link>
+          )}
+
+          {/* Client — so the photographer can shoot to preference and reach the agent */}
+          {client && (
+            <div className="rounded-2xl border border-ink-700 bg-ink-900 p-5">
+              <h3 className="text-xs font-semibold uppercase tracking-widest text-bone/40">
+                Client
+              </h3>
+              <p className="mt-2 font-semibold text-bone">{client.name}</p>
+              {client.brokerage && (
+                <p className="text-sm text-bone/55">{client.brokerage}</p>
+              )}
+              {client.notes && (
+                <div className="mt-3 rounded-xl bg-ink-950 p-3">
+                  <p className="text-[11px] uppercase tracking-wide text-bone/40">
+                    Preferences
+                  </p>
+                  <p className="mt-1 text-sm text-bone/75">{client.notes}</p>
+                </div>
+              )}
+              <div className="mt-3 flex flex-wrap gap-2">
+                {client.phone && (
+                  <a href={`tel:${client.phone}`} className="rounded-full bg-ink-800 px-3 py-1.5 text-xs text-bone/75 hover:text-bone">
+                    📞 Call
+                  </a>
+                )}
+                {client.phone && (
+                  <a href={`sms:${client.phone}`} className="rounded-full bg-ink-800 px-3 py-1.5 text-xs text-bone/75 hover:text-bone">
+                    💬 Text “running late”
+                  </a>
+                )}
+                {client.email && (
+                  <a href={`mailto:${client.email}`} className="rounded-full bg-ink-800 px-3 py-1.5 text-xs text-bone/75 hover:text-bone">
+                    ✉️ Email
+                  </a>
+                )}
+              </div>
+            </div>
           )}
         </aside>
       </div>

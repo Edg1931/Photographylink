@@ -3,22 +3,25 @@
 import { useState } from "react";
 import Link from "next/link";
 import { Button } from "@/components/ui";
-import { serviceTypes, Member } from "@/lib/data";
+import { serviceTypes, Member, Client } from "@/lib/data";
 import { PLATFORM_FEE_PCT, money } from "@/lib/economics";
 import { clsx } from "@/lib/clsx";
 
 export function PostJobForm({
   companySlug,
   members,
+  clients = [],
   onPosted,
 }: {
   companySlug: string;
   members: Member[];
+  clients?: Client[];
   onPosted?: () => void;
 }) {
   const [busy, setBusy] = useState(false);
   const [postedCount, setPostedCount] = useState<number | null>(null);
   const [target, setTarget] = useState<string>(""); // "" = whole bench
+  const [clientId, setClientId] = useState<string>("");
   const [property, setProperty] = useState("");
   const [neighborhood, setNeighborhood] = useState("");
   const [date, setDate] = useState("");
@@ -77,6 +80,7 @@ export function PostJobForm({
               shootAt,
               date: iso || undefined,
               clientPrice: s.client,
+              clientId: clientId || undefined,
               deliverables: s.blurb,
               equipment: "byo",
               urgency: "standard",
@@ -110,6 +114,18 @@ export function PostJobForm({
 
         {/* Property + timing */}
         <div className="grid gap-3 sm:grid-cols-2">
+          {clients.length > 0 && (
+            <L label="Client (optional)" full>
+              <select className="input" value={clientId} onChange={(e) => setClientId(e.target.value)}>
+                <option value="" className="bg-ink-800">No client / internal</option>
+                {clients.map((c) => (
+                  <option key={c.id} value={c.id} className="bg-ink-800">
+                    {c.name}{c.brokerage ? ` · ${c.brokerage}` : ""}
+                  </option>
+                ))}
+              </select>
+            </L>
+          )}
           <L label="Property / address" full>
             <input className="input" value={property} onChange={(e) => setProperty(e.target.value)} placeholder="1420 Wildflower Pass" />
           </L>

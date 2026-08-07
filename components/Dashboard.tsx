@@ -7,6 +7,7 @@ import {
   Offering,
   Specialty,
   Member,
+  Client,
   Job,
   allSpecialties,
 } from "@/lib/data";
@@ -40,6 +41,7 @@ type Tab =
   | "overview"
   | "schedule"
   | "bench"
+  | "clients"
   | "broadcast"
   | "books"
   | "leads"
@@ -137,6 +139,7 @@ export function Dashboard({
     { key: "overview", label: "Overview" },
     { key: "schedule", label: "Schedule", badge: appointments.length },
     { key: "bench", label: "My bench", badge: co.members.length },
+    { key: "clients", label: "Clients", badge: co.clients.length },
     { key: "broadcast", label: "Broadcast a shoot" },
     { key: "books", label: "Books" },
     { key: "leads", label: "Leads", badge: inquiries.length },
@@ -221,6 +224,7 @@ export function Dashboard({
         {tab === "bench" && (
           <BenchManager co={co} onChange={setCo} />
         )}
+        {tab === "clients" && <Clients co={co} onChange={setCo} />}
         {tab === "broadcast" && (
           <div>
             <SectionHead
@@ -230,6 +234,7 @@ export function Dashboard({
             <PostJobForm
               companySlug={co.slug}
               members={co.members.filter((m) => m.status === "active")}
+              clients={co.clients}
               onPosted={refreshJobs}
             />
           </div>
@@ -677,6 +682,137 @@ function BenchManager({
             Adding someone directly skips approval. To have photographers apply
             themselves, share your public page.
           </p>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ---- Clients (CRM) ----------------------------------------------------------
+
+function Clients({ co, onChange }: { co: Company; onChange: (c: Company) => void }) {
+  const [form, setForm] = useState({ name: "", brokerage: "", email: "", phone: "", notes: "" });
+  const [busy, setBusy] = useState(false);
+  const [editing, setEditing] = useState<string | null>(null);
+  const [draft, setDraft] = useState("");
+
+  const add = async () => {
+    setBusy(true);
+    try {
+      const res = await fetch("/api/company/clients", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify(form),
+      });
+      const data = await res.json();
+      if (data.ok) {
+        onChange({ ...co, clients: [...co.clients, data.client] });
+        setForm({ name: "", brokerage: "", email: "", phone: "", notes: "" });
+      }
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const remove = async (id: string) => {
+    await fetch(`/api/company/clients?id=${id}`, { method: "DELETE" });
+    onChange({ ...co, clients: co.clients.filter((c) => c.id !== id) });
+  };
+
+  const saveNotes = async (id: string) => {
+    await fetch("/api/company/clients", {
+      method: "PATCH",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ id, notes: draft }),
+    });
+    onChange({
+      ...co,
+      clients: co.clients.map((c) => (c.id === id ? { ...c, notes: draft } : c)),
+    });
+    setEditing(null);
+  };
+
+  return (
+    <div className="grid gap-8 lg:grid-cols-[1.4fr_1fr]">
+      <div>
+        <SectionHead
+          title="Clients"
+          sub="Your agents and brokerages — with their preferences on file, so every photographer shoots the way each client likes and can reach them from the job."
+        />
+        {co.clients.length === 0 ? (
+          <div className="rounded-2xl border border-dashed border-ink-700 p-8 text-center text-bone/45">
+            No clients yet. Add your first agent on the right.
+          </div>
+        ) : (
+          <div className="space-y-3">
+            {co.clients.map((c) => (
+              <div key={c.id} className="rounded-2xl border border-ink-700 bg-ink-900 p-4">
+                <div className="flex items-start justify-between gap-3">
+                  <div>
+                    <p className="font-semibold text-bone">{c.name}</p>
+                    <p className="text-xs text-bone/50">{c.brokerage}</p>
+                  </div>
+                  <div className="flex items-center gap-1.5">
+                    {c.phone && (
+                      <a href={`tel:${c.phone}`} className="rounded-full bg-ink-800 px-3 py-1.5 text-xs text-bone/70 hover:text-bone" title={c.phone}>📞 Call</a>
+                    )}
+                    {c.phone && (
+                      <a href={`sms:${c.phone}`} className="rounded-full bg-ink-800 px-3 py-1.5 text-xs text-bone/70 hover:text-bone">💬 Text</a>
+                    )}
+                    {c.email && (
+                      <a href={`mailto:${c.email}`} className="rounded-full bg-ink-800 px-3 py-1.5 text-xs text-bone/70 hover:text-bone">✉️ Email</a>
+                    )}
+                    <button onClick={() => remove(c.id)} className="rounded-full px-2 py-1.5 text-xs text-bone/40 hover:text-rose-300" aria-label="Remove">✕</button>
+                  </div>
+                </div>
+                <div className="mt-3">
+                  <p className="text-[11px] uppercase tracking-wide text-bone/40">Preferences &amp; notes</p>
+                  {editing === c.id ? (
+                    <div className="mt-1">
+                      <textarea className="input resize-none" rows={2} value={draft} onChange={(e) => setDraft(e.target.value)} />
+                      <div className="mt-2 flex gap-2">
+                        <Button className="py-1.5 text-xs" onClick={() => saveNotes(c.id)}>Save</Button>
+                        <button onClick={() => setEditing(null)} className="text-xs text-bone/50 hover:text-bone">Cancel</button>
+                      </div>
+                    </div>
+                  ) : (
+                    <p
+                      onClick={() => { setEditing(c.id); setDraft(c.notes ?? ""); }}
+                      className="mt-1 cursor-text rounded-lg bg-ink-950 p-2.5 text-sm text-bone/75 hover:ring-1 hover:ring-inset hover:ring-ink-600"
+                    >
+                      {c.notes || <span className="text-bone/35">Add preferences (e.g. "bright & airy", gate code, always wants drone)…</span>}
+                    </p>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      <div className="rounded-2xl border border-ink-700 bg-ink-900 p-5 lg:sticky lg:top-20 lg:self-start">
+        <h3 className="mb-3 text-xs font-semibold uppercase tracking-widest text-bone/40">Add a client</h3>
+        <div className="space-y-3">
+          <Labeled label="Agent name">
+            <input className="input" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder="Jordan Rivera" />
+          </Labeled>
+          <Labeled label="Brokerage">
+            <input className="input" value={form.brokerage} onChange={(e) => setForm({ ...form, brokerage: e.target.value })} placeholder="Compass" />
+          </Labeled>
+          <div className="grid grid-cols-2 gap-3">
+            <Labeled label="Phone">
+              <input className="input" value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} placeholder="512-555-0100" />
+            </Labeled>
+            <Labeled label="Email">
+              <input className="input" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} placeholder="agent@brokerage.com" />
+            </Labeled>
+          </div>
+          <Labeled label="Preferences / notes">
+            <textarea className="input resize-none" rows={3} value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} placeholder="What they like, gate codes, quirks…" />
+          </Labeled>
+          <Button className="w-full" onClick={add} disabled={busy || !form.name}>
+            {busy ? "Adding…" : "Add client"}
+          </Button>
         </div>
       </div>
     </div>

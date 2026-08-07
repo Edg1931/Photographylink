@@ -31,6 +31,7 @@ export async function POST(req: Request) {
     assignedToSlug: body.assignedToSlug || undefined,
     date: body.date || undefined,
     clientPrice: body.clientPrice ? Number(body.clientPrice) : undefined,
+    clientId: body.clientId || undefined,
   });
   // Text the bench (no-op until Twilio is configured).
   void textBenchAboutJob(job.companySlug, job.title, job.assignedToSlug);

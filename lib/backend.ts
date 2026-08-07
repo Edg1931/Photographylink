@@ -16,6 +16,7 @@ import {
   photographers as seedPhotographers,
   Company,
   Member,
+  Client,
   Photographer,
 } from "./data";
 import { getSupabase } from "./supabase";
@@ -168,6 +169,65 @@ export async function getMember(
 ): Promise<Member | undefined> {
   const company = await getCompany(slug);
   return company?.members.find((m) => m.id === memberId);
+}
+
+// ---- Clients (CRM) ----------------------------------------------------------
+
+export interface ClientInput {
+  name: string;
+  brokerage?: string;
+  email?: string;
+  phone?: string;
+  notes?: string;
+}
+
+export async function addClient(
+  slug: string,
+  input: ClientInput,
+): Promise<Client | undefined> {
+  const company = await getCompany(slug);
+  if (!company) return undefined;
+  const client: Client = {
+    id: `cl-${randomUUID().slice(0, 6)}`,
+    name: input.name,
+    brokerage: input.brokerage,
+    email: input.email,
+    phone: input.phone,
+    notes: input.notes,
+    createdAt: Date.now(),
+  };
+  await updateCompany(slug, { clients: [...company.clients, client] });
+  return client;
+}
+
+export async function updateClient(
+  slug: string,
+  clientId: string,
+  patch: Partial<ClientInput>,
+): Promise<Client | undefined> {
+  const company = await getCompany(slug);
+  if (!company) return undefined;
+  const clients = company.clients.map((c) =>
+    c.id === clientId ? { ...c, ...patch } : c,
+  );
+  await updateCompany(slug, { clients });
+  return clients.find((c) => c.id === clientId);
+}
+
+export async function removeClient(slug: string, clientId: string): Promise<void> {
+  const company = await getCompany(slug);
+  if (!company) return;
+  await updateCompany(slug, {
+    clients: company.clients.filter((c) => c.id !== clientId),
+  });
+}
+
+export async function getClient(
+  slug: string,
+  clientId: string,
+): Promise<Client | undefined> {
+  const company = await getCompany(slug);
+  return company?.clients.find((c) => c.id === clientId);
 }
 
 export interface ApplicationInput {
@@ -513,6 +573,7 @@ function newCompanyRecord(name: string, slug: string, ownerName: string): Compan
     ],
     bench: [],
     members: [],
+    clients: [],
     showcase,
   };
 }

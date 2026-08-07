@@ -1,28 +1,34 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { Job } from "@/lib/data";
+import { Job, Client } from "@/lib/data";
 import { Container } from "@/components/ui";
 import { PAYOUT_DAYS } from "@/lib/economics";
 import { clsx } from "@/lib/clsx";
+
+const propertyOf = (j: Job) => j.title.split(" · ")[0];
 
 export function BenchClaim({
   companySlug,
   companyName,
   accent,
   logoMark,
+  clients = [],
   member,
 }: {
   companySlug: string;
   companyName: string;
   accent: string;
   logoMark: string;
+  clients?: Client[];
   member: { id: string; name: string; avatar: string };
 }) {
   const [jobs, setJobs] = useState<Job[]>([]);
   const [loaded, setLoaded] = useState(false);
   const [busy, setBusy] = useState<string | null>(null);
   const [toast, setToast] = useState<{ msg: string; tone: "ok" | "err" } | null>(null);
+
+  const clientOf = (id?: string) => clients.find((c) => c.id === id);
 
   const refresh = useCallback(async () => {
     const data = await fetch("/api/jobs", { cache: "no-store" }).then((r) => r.json());
@@ -34,15 +40,19 @@ export function BenchClaim({
     refresh();
   }, [refresh]);
 
-  const available = useMemo(
-    () =>
-      jobs.filter(
-        (j) =>
-          j.status === "open" &&
-          (!j.assignedToSlug || j.assignedToSlug === member.id),
-      ),
-    [jobs, member.id],
-  );
+  // Group the shoots this member can claim by property.
+  const groups = useMemo(() => {
+    const available = jobs.filter(
+      (j) => j.status === "open" && (!j.assignedToSlug || j.assignedToSlug === member.id),
+    );
+    const map = new Map<string, Job[]>();
+    for (const j of available) {
+      const key = `${propertyOf(j)}|${j.date ?? j.shootAt}`;
+      map.set(key, [...(map.get(key) ?? []), j]);
+    }
+    return Array.from(map.values());
+  }, [jobs, member.id]);
+
   const mine = useMemo(
     () =>
       jobs
@@ -60,7 +70,7 @@ export function BenchClaim({
         body: JSON.stringify({ memberId: member.id, jobId }),
       });
       const data = await res.json();
-      if (data.ok) setToast({ msg: "You got it! Added to your shoots below.", tone: "ok" });
+      if (data.ok) setToast({ msg: "You got it! It's on your calendar below.", tone: "ok" });
       else if (data.reason === "reserved")
         setToast({ msg: "That one was offered to someone else.", tone: "err" });
       else setToast({ msg: "Someone else claimed it first.", tone: "err" });
@@ -73,100 +83,116 @@ export function BenchClaim({
 
   return (
     <Container className="max-w-2xl py-10">
-      {/* Header */}
       <div className="flex items-center gap-3">
-        <span
-          className="flex h-11 w-11 items-center justify-center rounded-xl text-lg font-bold text-ink-950"
-          style={{ background: accent }}
-        >
+        <span className="flex h-11 w-11 items-center justify-center rounded-xl text-lg font-bold text-ink-950" style={{ background: accent }}>
           {logoMark}
         </span>
         <div>
           <p className="text-sm text-bone/55">{companyName}</p>
-          <h1 className="font-display text-2xl font-semibold">
-            Hi {member.name.split(" ")[0]} 👋
-          </h1>
+          <h1 className="font-display text-2xl font-semibold">Hi {member.name.split(" ")[0]} 👋</h1>
         </div>
       </div>
       <p className="mt-3 text-bone/65">
-        Here are shoots you can claim. Tap <strong className="text-bone">Claim</strong> and
-        it&apos;s yours — then add it to your phone&apos;s calendar.
+        Here's work you can claim — each shoot is broken down by service, so you
+        see exactly what to do and <strong className="text-bone">exactly what you earn</strong>.
       </p>
 
-      {/* Available */}
-      <h2 className="mt-8 text-sm font-semibold uppercase tracking-wide text-bone/45">
-        Available now
-      </h2>
-      <div className="mt-3 space-y-3">
+      <h2 className="mt-8 text-sm font-semibold uppercase tracking-wide text-bone/45">Available now</h2>
+      <div className="mt-3 space-y-4">
         {!loaded ? (
-          <div className="h-24 animate-pulse rounded-2xl bg-ink-900" />
-        ) : available.length === 0 ? (
+          <div className="h-32 animate-pulse rounded-2xl bg-ink-900" />
+        ) : groups.length === 0 ? (
           <div className="rounded-2xl border border-dashed border-ink-700 p-8 text-center text-bone/45">
-            Nothing to claim right now. Check back when {companyName} broadcasts a shoot.
+            Nothing to claim right now. Check back when {companyName} sends out a shoot.
           </div>
         ) : (
-          available.map((j) => (
-            <div key={j.id} className="rounded-2xl border border-ink-700 bg-ink-900 p-5">
-              <div className="flex items-start justify-between gap-3">
-                <div>
-                  <h3 className="font-semibold text-bone">{j.title}</h3>
-                  <p className="mt-1 text-sm text-bone/60">
-                    {j.shootAt} · {j.neighborhood}
-                  </p>
+          groups.map((g, gi) => {
+            const first = g[0];
+            const client = clientOf(first.clientId);
+            const total = g.reduce((s, j) => s + j.payout, 0);
+            return (
+              <div key={gi} className="overflow-hidden rounded-2xl border border-ink-700 bg-ink-900">
+                {/* Property header */}
+                <div className="border-b border-ink-700 p-4">
+                  <div className="flex items-start justify-between gap-3">
+                    <div>
+                      <h3 className="font-semibold text-bone">{propertyOf(first)}</h3>
+                      <p className="mt-0.5 text-sm text-bone/55">{first.shootAt} · {first.neighborhood}</p>
+                    </div>
+                    <div className="text-right">
+                      <p className="text-[11px] uppercase tracking-wide text-bone/40">Up to</p>
+                      <p className="font-display text-xl font-semibold text-amber-soft">${total}</p>
+                    </div>
+                  </div>
+                  {client?.notes && (
+                    <p className="mt-2 rounded-lg bg-ink-950 p-2.5 text-xs text-bone/70">
+                      <span className="font-medium text-bone/80">{client.name}'s preferences:</span> {client.notes}
+                    </p>
+                  )}
+                  {first.assignedToSlug === member.id && (
+                    <p className="mt-2 text-xs font-medium text-sky-300">⭐ Offered directly to you</p>
+                  )}
                 </div>
-                <span className="shrink-0 text-lg font-semibold text-amber-soft">${j.payout}</span>
+                {/* Service line items */}
+                <div className="divide-y divide-ink-800">
+                  {g.map((j) => (
+                    <div key={j.id} className="flex items-center gap-3 p-3">
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-center gap-2">
+                          <span className="rounded bg-ink-800 px-2 py-0.5 text-xs font-medium text-bone/80">{j.type}</span>
+                          <span className="text-sm font-semibold text-amber-soft">${j.payout}</span>
+                        </div>
+                        <p className="mt-1 truncate text-xs text-bone/50">
+                          {j.deliverables} · {j.durationHours} hr ·{" "}
+                          {j.equipment === "byo" ? "BYO kit" : j.equipment === "provided" ? "gear provided" : "gear optional"} · pays in {PAYOUT_DAYS}d
+                        </p>
+                      </div>
+                      <button
+                        onClick={() => claim(j.id)}
+                        disabled={busy === j.id}
+                        className="shrink-0 rounded-full bg-amber-brand px-4 py-2 text-sm font-semibold text-ink-950 transition-colors hover:bg-amber-soft disabled:opacity-60"
+                      >
+                        {busy === j.id ? "…" : "Claim"}
+                      </button>
+                    </div>
+                  ))}
+                </div>
               </div>
-              <p className="mt-2 text-sm text-bone/55">{j.deliverables}</p>
-              <div className="mt-3 flex flex-wrap gap-1.5">
-                <Chip>{j.type}</Chip>
-                <Chip>{j.durationHours} hr</Chip>
-                <Chip>
-                  {j.equipment === "byo"
-                    ? "Bring your kit"
-                    : j.equipment === "provided"
-                      ? "Gear provided"
-                      : "Gear optional"}
-                </Chip>
-                <Chip accent>💵 Pays in {PAYOUT_DAYS} days</Chip>
-              </div>
-              {j.assignedToSlug === member.id && (
-                <p className="mt-2 text-xs font-medium text-sky-300">
-                  ⭐ Offered directly to you
-                </p>
-              )}
-              <button
-                onClick={() => claim(j.id)}
-                disabled={busy === j.id}
-                className="mt-4 w-full rounded-full bg-amber-brand py-3 text-base font-semibold text-ink-950 transition-colors hover:bg-amber-soft disabled:opacity-60"
-              >
-                {busy === j.id ? "Claiming…" : "Claim this shoot"}
-              </button>
-            </div>
-          ))
+            );
+          })
         )}
       </div>
 
-      {/* Mine */}
       {mine.length > 0 && (
         <>
-          <h2 className="mt-10 text-sm font-semibold uppercase tracking-wide text-bone/45">
-            Your upcoming shoots
-          </h2>
+          <h2 className="mt-10 text-sm font-semibold uppercase tracking-wide text-bone/45">Your upcoming shoots</h2>
           <div className="mt-3 space-y-3">
-            {mine.map((j) => (
-              <div key={j.id} className="flex items-center justify-between gap-3 rounded-2xl border border-emerald-500/25 bg-emerald-500/5 p-4">
-                <div>
-                  <h3 className="font-semibold text-bone">{j.title}</h3>
-                  <p className="text-sm text-bone/60">{j.shootAt} · {j.neighborhood}</p>
+            {mine.map((j) => {
+              const client = clientOf(j.clientId);
+              return (
+                <div key={j.id} className="rounded-2xl border border-emerald-500/25 bg-emerald-500/5 p-4">
+                  <div className="flex items-center justify-between gap-3">
+                    <div>
+                      <h3 className="font-semibold text-bone">{j.title}</h3>
+                      <p className="text-sm text-bone/60">{j.shootAt} · {j.neighborhood} · ${j.payout}</p>
+                    </div>
+                    <a href={`/api/calendar/${j.id}`} className="shrink-0 rounded-full bg-ink-800 px-4 py-2 text-sm font-medium text-bone hover:bg-ink-700">
+                      + Calendar
+                    </a>
+                  </div>
+                  {client && (
+                    <div className="mt-3 border-t border-emerald-500/15 pt-3">
+                      {client.notes && <p className="text-xs text-bone/65"><span className="font-medium text-bone/80">{client.name}:</span> {client.notes}</p>}
+                      <div className="mt-2 flex flex-wrap gap-2">
+                        {client.phone && <a href={`tel:${client.phone}`} className="rounded-full bg-ink-900 px-3 py-1.5 text-xs text-bone/75 hover:text-bone">📞 Call {client.name.split(" ")[0]}</a>}
+                        {client.phone && <a href={`sms:${client.phone}`} className="rounded-full bg-ink-900 px-3 py-1.5 text-xs text-bone/75 hover:text-bone">💬 Text “running late”</a>}
+                        {client.email && <a href={`mailto:${client.email}`} className="rounded-full bg-ink-900 px-3 py-1.5 text-xs text-bone/75 hover:text-bone">✉️ Email</a>}
+                      </div>
+                    </div>
+                  )}
                 </div>
-                <a
-                  href={`/api/calendar/${j.id}`}
-                  className="shrink-0 rounded-full bg-ink-800 px-4 py-2 text-sm font-medium text-bone hover:bg-ink-700"
-                >
-                  + Add to calendar
-                </a>
-              </div>
-            ))}
+              );
+            })}
           </div>
         </>
       )}
@@ -184,19 +210,5 @@ export function BenchClaim({
         </div>
       )}
     </Container>
-  );
-}
-
-function Chip({ children, accent }: { children: React.ReactNode; accent?: boolean }) {
-  return (
-    <span
-      className={
-        accent
-          ? "rounded-full bg-amber-brand/12 px-2.5 py-1 text-xs font-medium text-amber-soft ring-1 ring-inset ring-amber-brand/25"
-          : "rounded-full bg-ink-800 px-2.5 py-1 text-xs font-medium text-bone/60"
-      }
-    >
-      {children}
-    </span>
   );
 }

@@ -33,6 +33,7 @@ create table if not exists public.companies (
   offerings        jsonb not null default '[]',
   bench            jsonb not null default '[]',
   members          jsonb not null default '[]',
+  clients          jsonb not null default '[]',
   showcase         jsonb not null default '[]',
   owner_id         uuid,
   created_at       timestamptz not null default now()
@@ -84,6 +85,7 @@ create table if not exists public.jobs (
   claimed_by_name text,
   assigned_to     text,
   date            text,
+  client_id       text,
   urgency         text not null default 'standard',
   created_at      timestamptz not null default now()
 );

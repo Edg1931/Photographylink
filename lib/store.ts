@@ -202,6 +202,7 @@ export async function postJob(input: NewJobInput): Promise<Job> {
     status: "open",
     assignedToSlug: input.assignedToSlug || undefined,
     date: input.date || undefined,
+    clientId: input.clientId || undefined,
     urgency: input.urgency,
   };
   const sb = getSupabase();

@@ -28,6 +28,7 @@ export default async function BenchMemberPage({
       companyName={company.name}
       accent={company.accent}
       logoMark={company.logoMark}
+      clients={company.clients}
       member={{ id: member.id, name: member.name, avatar: member.avatar ?? "" }}
     />
   );

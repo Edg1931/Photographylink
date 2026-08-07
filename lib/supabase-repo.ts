@@ -57,6 +57,7 @@ function toCompany(r: any): Company {
     offerings: r.offerings ?? [],
     bench: r.bench ?? [],
     members: r.members ?? [],
+    clients: r.clients ?? [],
     showcase: r.showcase ?? [],
   };
 }
@@ -86,6 +87,7 @@ function companyRow(c: Company) {
     offerings: c.offerings,
     bench: c.bench,
     members: c.members,
+    clients: c.clients,
     showcase: c.showcase,
   };
 }
@@ -107,6 +109,7 @@ function patchRow(p: CompanyPatch) {
   if (p.offerings !== undefined) row.offerings = p.offerings;
   if (p.perks !== undefined) row.perks = p.perks;
   if (p.members !== undefined) row.members = p.members;
+  if (p.clients !== undefined) row.clients = p.clients;
   return row;
 }
 
@@ -199,6 +202,7 @@ function toJob(r: any): Job {
     claimedByName: r.claimed_by_name ?? undefined,
     assignedToSlug: r.assigned_to ?? undefined,
     date: r.date ?? undefined,
+    clientId: r.client_id ?? undefined,
     urgency: r.urgency,
   };
 }
@@ -223,6 +227,7 @@ function jobRow(j: Job) {
     claimed_by_name: j.claimedByName ?? null,
     assigned_to: j.assignedToSlug ?? null,
     date: j.date ?? null,
+    client_id: j.clientId ?? null,
     urgency: j.urgency,
   };
 }
